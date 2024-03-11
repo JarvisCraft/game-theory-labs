@@ -1,0 +1,14 @@
+[package]
+name = "lab-01-brown_robinson"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nalgebra.workspace = true
+ordered-float.workspace = true
+rational.workspace = true
+prettytable.workspace = true
+rand.workspace = true
+
+[features]
+example = []

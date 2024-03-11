@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+    "lab-01-brown_robinson",
+]
+
+[workspace.dependencies]
+nalgebra = "0.32.4"
+ordered-float = "4.2"
+rational = "1.5"
+prettytable = "0.10"
+rand = "0.8.5"
