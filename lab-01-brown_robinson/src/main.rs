@@ -8,7 +8,7 @@ use std::iter::FusedIterator;
 
 type Value = f64;
 
-/// Тип для удосбтва, автоматически выполняющий округление значение при выводе.
+/// Тип для удобства, автоматически выполняющий округление значение при выводе.
 #[derive(Debug)]
 struct F(Value);
 
@@ -145,23 +145,9 @@ impl BrownRobinsonIterator {
             .map(|(index, _)| index)
             .collect();
         (
-            *a_indices.choose(&mut rand::thread_rng()).unwrap(),
-            *b_indices.choose(&mut rand::thread_rng()).unwrap(),
+            *a_indices.choose(&mut thread_rng()).unwrap(),
+            *b_indices.choose(&mut thread_rng()).unwrap(),
         )
-        // (
-        //     a_scores
-        //         .iter()
-        //         .enumerate()
-        //         .max_by_key(|(_, &value)| NotNan::new(value).unwrap())
-        //         .map(|(index, _)| index)
-        //         .unwrap(),
-        //     b_scores
-        //         .iter()
-        //         .enumerate()
-        //         .min_by_key(|(_, &value)| NotNan::new(value).unwrap())
-        //         .map(|(index, _)| index)
-        //         .unwrap(),
-        // )
     }
 
     fn high_price(&self) -> Value {
