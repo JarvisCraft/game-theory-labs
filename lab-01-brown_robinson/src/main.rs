@@ -27,7 +27,27 @@ fn v(value: u64) -> Value {
 const M: usize = 3;
 const N: usize = 3;
 
-struct BrownRobinson {
+pub struct BrownRobinsonRow {
+    /// Номер текущей итерации
+    iteration: usize,
+    /// Текущая стратегия игрока A
+    a_strategy: usize,
+    /// Текущая стратегия игрока B
+    b_strategy: usize,
+    /// Накопленный выигрыш игрока A
+    a_score: Matrix1x3<Value>,
+    /// Накопленный выигрыш игрока B
+    b_score: Matrix1x3<Value>,
+    /// Верхняя цена игры
+    high_price: Value,
+    /// Нижняя цена игры
+    low_price: Value,
+    /// ε, разница между минимальной верхней и максиммальной нижней ценами игры
+    epsilon: Value,
+}
+
+// Итератор по шагам метода
+pub struct BrownRobinson {
     game_matrix: Matrix3<Value>,
     a_strategy: usize,
     b_strategy: usize,
@@ -37,6 +57,7 @@ struct BrownRobinson {
     max_low_price: Value,
     a_strategy_used: [usize; M],
     b_strategy_used: [usize; N],
+    k: usize,
 }
 
 impl BrownRobinson {
@@ -65,61 +86,24 @@ impl BrownRobinson {
             max_low_price,
             a_strategy_used,
             b_strategy_used,
+            k: 0,
         }
     }
-}
 
-impl IntoIterator for BrownRobinson {
-    type Item = BrownRobinsonRow;
-    type IntoIter = BrownRobinsonIterator;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BrownRobinsonIterator(self, 0)
-    }
-}
-
-struct BrownRobinsonRow {
-    /// Номер текущей итерации
-    iteration: usize,
-    /// Текущая стратегия игрока A
-    a_strategy: usize,
-    /// Текущая стратегия игрока B
-    b_strategy: usize,
-    /// Накопленный выигрыш игрока A
-    a_score: Matrix1x3<Value>,
-    /// Накопленный выигрыш игрока B
-    b_score: Matrix1x3<Value>,
-    /// Верхняя цена игры
-    high_price: Value,
-    /// Нижняя цена игры
-    low_price: Value,
-    /// ε, разница между минимальной верхней и максиммальной нижней ценами игры
-    epsilon: Value,
-}
-
-// Итератор по шагам метода
-struct BrownRobinsonIterator(BrownRobinson, usize);
-
-impl BrownRobinsonIterator {
     pub fn bounds(&self) -> (Value, Value) {
-        (self.0.max_low_price, self.0.min_high_price)
+        (self.max_low_price, self.min_high_price)
     }
 
     pub fn k(&self) -> usize {
-        self.1
+        self.k
     }
 
     fn strategies_used(&self) -> ([usize; M], [usize; N]) {
-        (self.0.a_strategy_used, self.0.b_strategy_used)
+        (self.a_strategy_used, self.b_strategy_used)
     }
 
     fn next_strategies(&self) -> (usize, usize) {
-        let Self(
-            BrownRobinson {
-                a_scores, b_scores, ..
-            },
-            _,
-        ) = self;
+        let Self { a_scores, b_scores, .. } = self;
 
         let max_a = a_scores
             .iter()
@@ -151,60 +135,60 @@ impl BrownRobinsonIterator {
     }
 
     fn high_price(&self) -> Value {
-        self.0.a_scores.max()
+        self.a_scores.max()
     }
 
     fn low_price(&self) -> Value {
-        self.0.b_scores.min()
+        self.b_scores.min()
     }
 }
 
-impl Iterator for BrownRobinsonIterator {
+impl Iterator for BrownRobinson {
     type Item = BrownRobinsonRow;
 
     /// Осуществляет шаг алгоритма Брауна-Робинсон.
     fn next(&mut self) -> Option<Self::Item> {
-        self.1 += 1;
-        let (high_price, low_price) = if self.1 == 1 {
+        self.k += 1;
+        let (high_price, low_price) = if self.k == 1 {
             (self.high_price(), self.low_price())
         } else {
             let (a_strategy, b_strategy) = self.next_strategies();
-            self.0.a_strategy = a_strategy;
-            self.0.a_strategy_used[a_strategy] += 1;
-            self.0.b_strategy = b_strategy;
-            self.0.b_strategy_used[b_strategy] += 1;
-            self.0.a_scores += Matrix1x3::from(self.0.game_matrix.row(b_strategy));
-            self.0.b_scores += Matrix1x3::from(self.0.game_matrix.column(a_strategy).transpose());
+            self.a_strategy = a_strategy;
+            self.a_strategy_used[a_strategy] += 1;
+            self.b_strategy = b_strategy;
+            self.b_strategy_used[b_strategy] += 1;
+            self.a_scores += Matrix1x3::from(self.game_matrix.row(b_strategy));
+            self.b_scores += Matrix1x3::from(self.game_matrix.column(a_strategy).transpose());
 
-            let high_price = self.high_price() / self.1 as Value;
-            let low_price = self.low_price() / self.1 as Value;
+            let high_price = self.high_price() / self.k as Value;
+            let low_price = self.low_price() / self.k as Value;
 
-            self.0.min_high_price = self.0.min_high_price.min(high_price);
-            self.0.max_low_price = self.0.max_low_price.max(low_price);
+            self.min_high_price = self.min_high_price.min(high_price);
+            self.max_low_price = self.max_low_price.max(low_price);
 
             (high_price, low_price)
         };
 
         Some(BrownRobinsonRow {
-            iteration: self.1,
-            a_strategy: self.0.a_strategy,
-            b_strategy: self.0.b_strategy,
-            a_score: self.0.a_scores,
-            b_score: self.0.b_scores,
+            iteration: self.k,
+            a_strategy: self.a_strategy,
+            b_strategy: self.b_strategy,
+            a_score: self.a_scores,
+            b_score: self.b_scores,
             high_price,
             low_price,
-            epsilon: self.0.min_high_price - self.0.max_low_price,
+            epsilon: self.min_high_price - self.max_low_price,
         })
     }
 }
 
-impl FusedIterator for BrownRobinsonIterator {}
+impl FusedIterator for BrownRobinson {}
 
 fn main() {
     // Условия задачи
     const ACCURACY: f64 = 0.1;
     #[cfg(not(feature = "example"))]
-    let game = BrownRobinson::new([
+    let mut game = BrownRobinson::new([
         [v(8), v(12), v(10)],
         [v(1), v(6), v(19)],
         [v(17), v(11), v(11)],
@@ -212,7 +196,7 @@ fn main() {
 
     #[cfg(feature = "example")]
     // The original game to ensure algorithm correctness:
-    let game = BrownRobinson::new([[v(2), v(1), v(3)], [v(3), v(0), v(1)], [v(1), v(2), v(1)]]);
+    let mut game = BrownRobinson::new([[v(2), v(1), v(3)], [v(3), v(0), v(1)], [v(1), v(2), v(1)]]);
 
     let mut table = table!([
         "k", "A", "B", "A:x1", "A:x2", "A:x3", "B:y1", "B:y2", "B:y3", "ВЦИ", "НЦИ", "ε"
@@ -220,7 +204,6 @@ fn main() {
     table.set_format(*FORMAT_BOX_CHARS);
 
     // Запускаем итеративный алгоритм
-    let mut game = game.into_iter();
     for BrownRobinsonRow {
         iteration,
         a_strategy,
