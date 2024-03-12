@@ -315,8 +315,8 @@ fn main() {
     let (a_strategy_used, b_strategy_used) = game.strategies_used();
     println!(
         "x[{k}] = {:?}, y[{k}] = {:?}",
-        a_strategy_used.map(|v| format!("{v}/{k}")),
-        b_strategy_used.map(|v| format!("{v}/{k}"))
+        a_strategy_used.map(|v| format!("{v}/{k}={}", F(v as f64 / k as f64))),
+        b_strategy_used.map(|v| format!("{v}/{k}={}", F(v as f64 / k as f64)))
     );
 
     match File::create("output.csv") {
