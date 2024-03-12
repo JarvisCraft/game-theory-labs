@@ -61,6 +61,7 @@ pub struct BrownRobinson {
 }
 
 impl BrownRobinson {
+    #[must_use]
     pub fn new(game_matrix: [[Value; M]; N]) -> Self {
         let game_matrix = Matrix3::from_data(nalgebra::ArrayStorage(game_matrix));
         let a_strategy = thread_rng().gen_range(0..M);
@@ -90,10 +91,12 @@ impl BrownRobinson {
         }
     }
 
+    #[must_use]
     pub fn bounds(&self) -> (Value, Value) {
         (self.max_low_price, self.min_high_price)
     }
 
+    #[must_use]
     pub fn k(&self) -> usize {
         self.k
     }
@@ -256,11 +259,11 @@ fn main() {
                 println!("CSV file generated successfully");
             }
             Err(e) => {
-                eprintln!("Failed to write CSV to file: {e}")
+                eprintln!("Failed to write CSV to file: {e}");
             }
         },
         Err(e) => {
-            eprintln!("Failed to open file: {e}")
+            eprintln!("Failed to open file: {e}");
         }
     }
 }
