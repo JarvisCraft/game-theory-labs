@@ -1,10 +1,12 @@
-use nalgebra::{Matrix1x3, Matrix3};
+use nalgebra::{ArrayStorage, Matrix1x3, Matrix1x4, Matrix3, Matrix4, Matrix4x1};
 use ordered_float::NotNan;
 use prettytable::{format::consts::FORMAT_BOX_CHARS, row, table};
 use rand::{seq::SliceRandom, thread_rng, Rng};
-use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::iter::FusedIterator;
+use std::{
+    fmt::{Display, Formatter},
+    fs::File,
+    iter::FusedIterator,
+};
 
 type Value = f64;
 
@@ -93,6 +95,29 @@ impl BrownRobinson {
 
     #[must_use]
     pub fn bounds(&self) -> (Value, Value) {
+        let max_min = self
+            .game_matrix
+            .row_iter()
+            .map(|row| NotNan::new(row.min()).unwrap())
+            .max()
+            .unwrap();
+        let min_max = self
+            .game_matrix
+            .row_iter() // why?
+            .map(|row| NotNan::new(row.max()).unwrap())
+            .min()
+            .unwrap();
+
+        (*max_min, *min_max)
+    }
+
+    #[must_use]
+    pub fn game_matrix(&self) -> Matrix3<Value> {
+        self.game_matrix
+    }
+
+    #[must_use]
+    pub fn min_max_prices(&self) -> (Value, Value) {
         (self.max_low_price, self.min_high_price)
     }
 
@@ -106,7 +131,9 @@ impl BrownRobinson {
     }
 
     fn next_strategies(&self) -> (usize, usize) {
-        let Self { a_scores, b_scores, .. } = self;
+        let Self {
+            a_scores, b_scores, ..
+        } = self;
 
         let max_a = a_scores
             .iter()
@@ -187,6 +214,23 @@ impl Iterator for BrownRobinson {
 
 impl FusedIterator for BrownRobinson {}
 
+fn solve_linear_equations(matrix: Matrix3<Value>) -> Matrix1x4<Value> {
+    let row_0 = matrix.row(0);
+    let row_1 = matrix.row(1);
+    let row_2 = matrix.row(2);
+
+    Matrix4::from_data(ArrayStorage([
+        [row_0[0], row_0[1], row_0[2], -1.],
+        [row_1[0], row_1[1], row_1[2], -1.],
+        [row_2[0], row_2[1], row_2[2], -1.],
+        [1., 1., 1., 0.],
+    ]))
+    .lu()
+    .solve(&Matrix4x1::from_data(ArrayStorage([[0., 0., 0., 1.]])))
+    .unwrap()
+    .transpose()
+}
+
 fn main() {
     // Условия задачи
     const ACCURACY: f64 = 0.1;
@@ -200,6 +244,26 @@ fn main() {
     #[cfg(feature = "example")]
     // The original game to ensure algorithm correctness:
     let mut game = BrownRobinson::new([[v(2), v(1), v(3)], [v(3), v(0), v(1)], [v(1), v(2), v(1)]]);
+
+    println!("Игра: {}", game.game_matrix());
+
+    let (min, max) = game.bounds();
+    println!("Нижняя цена игры: {min}, верхняя цена игры: {max}");
+    let a = solve_linear_equations(game.game_matrix().transpose());
+    println!(
+        "Смешанная стратегия A: ({}, {}, {})",
+        F(-a[0]),
+        F(-a[1]),
+        F(-a[2])
+    );
+    let b = solve_linear_equations(game.game_matrix());
+    println!(
+        "Смешанная стратегия B: ({}, {}, {})",
+        F(-b[0]),
+        F(-b[1]),
+        F(-b[2])
+    );
+    println!("Цена игры: {}~{}", F(a[3]), F(b[3]));
 
     let mut table = table!([
         "k", "A", "B", "A:x1", "A:x2", "A:x3", "B:y1", "B:y2", "B:y3", "ВЦИ", "НЦИ", "ε"
@@ -239,11 +303,13 @@ fn main() {
     }
     println!("{table}");
 
-    let (max_low_price, min_high_price) = game.bounds();
+    let (max_low_price, min_high_price) = game.min_max_prices();
     let k = game.k();
     println!(
         "ВЦИ_min = {}, НЦИ_max = {}, ε[{k}] = {}",
-        F(min_high_price), F(max_low_price), F((max_low_price + min_high_price) / 2.)
+        F(min_high_price),
+        F(max_low_price),
+        F((max_low_price + min_high_price) / 2.)
     );
 
     let (a_strategy_used, b_strategy_used) = game.strategies_used();
