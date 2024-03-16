@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+brown_robinson_method.workspace = true
 nalgebra.workspace = true
 ordered-float.workspace = true
 rational.workspace = true

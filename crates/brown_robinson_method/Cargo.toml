@@ -1,0 +1,10 @@
+[package]
+name = "brown_robinson_method"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+num-traits.workspace = true
+ordered-float.workspace = true
+rand.workspace = true
+nalgebra.workspace = true

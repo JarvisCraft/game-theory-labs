@@ -1,10 +1,19 @@
 [workspace]
 resolver = "2"
 members = [
-    "lab-01-brown_robinson",
+    "crates/*",
+    "labs/*",
 ]
 
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+
 [workspace.dependencies]
+# own modules
+brown_robinson_method = { path = "crates/brown_robinson_method", version = "0.1.0" }
+# dependencies
+num-traits = "0.2.18"
 nalgebra = "0.32.4"
 ordered-float = "4.2"
 rational = "1.5"
