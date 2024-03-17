@@ -4,8 +4,7 @@ use std::iter::FusedIterator;
 
 use nalgebra::Matrix1x3;
 use ordered_float::NotNan;
-use rand::prelude::SliceRandom;
-use rand::thread_rng;
+use rand::{prelude::SliceRandom, thread_rng};
 
 use super::{BrownRobinson, BrownRobinsonRow, Value};
 
@@ -59,8 +58,8 @@ impl Iterator for BrownRobinson<Value> {
             self.a_strategy_used[a_strategy] += 1;
             self.b_strategy = b_strategy;
             self.b_strategy_used[b_strategy] += 1;
-            self.a_scores += Matrix1x3::from(self.game_matrix.row(b_strategy));
-            self.b_scores += Matrix1x3::from(self.game_matrix.column(a_strategy).transpose());
+            self.a_scores += Matrix1x3::from(self.game.0.row(b_strategy));
+            self.b_scores += Matrix1x3::from(self.game.0.column(a_strategy).transpose());
 
             let high_price = self.high_price() / self.k as Value;
             let low_price = self.low_price() / self.k as Value;

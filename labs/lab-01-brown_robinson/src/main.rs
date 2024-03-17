@@ -1,53 +1,33 @@
-use std::{
-    fmt::{Display, Formatter},
-    fs::File,
-};
+use std::{fs::File, path::PathBuf};
 
-use brown_robinson_method::{solve_linear_equations, BrownRobinson, BrownRobinsonRow};
+use clap::Parser;
+use nalgebra::{ArrayStorage, matrix, Matrix1x3};
 use prettytable::{format::consts::FORMAT_BOX_CHARS, row, table};
 
-type Value = f64;
-
-/// Тип для удобства, автоматически выполняющий округление значение при выводе.
-#[derive(Debug)]
-struct F(Value);
-
-impl Display for F {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let Self(value) = self;
-        write!(f, "{value:.3}")
-    }
-}
-
-// Функция для удобства замены типа значений
-fn v(value: u64) -> Value {
-    value as Value
-}
+use brown_robinson_method::{BrownRobinson, BrownRobinsonRow, solve_linear_equations};
 
 fn main() {
+    let options = Options::parse();
+
     // Условия задачи
     const ACCURACY: f64 = 0.1;
-    #[cfg(not(feature = "example"))]
-    let mut game = BrownRobinson::new([
-        [v(12), v(9), v(18)],
-        [v(15), v(22), v(5)],
-        [v(16), v(3), v(12)],
+
+    let mut game = BrownRobinson::new(matrix![
+        8., 12., 10.;
+        1., 6., 19.;
+        17., 11., 11.;
     ]);
 
-    #[cfg(feature = "example")]
-    // The original game to ensure algorithm correctness:
-    let mut game = BrownRobinson::new([[v(2), v(1), v(3)], [v(3), v(0), v(1)], [v(1), v(2), v(1)]]);
-
-    println!("Игра: {}", game.game_matrix());
+    println!("Игра: {}", game.game());
 
     let (min, max) = game.bounds();
     println!("Нижняя цена игры: {min}, верхняя цена игры: {max}");
-    let a = solve_linear_equations(game.game_matrix().transpose());
+    let a = solve_linear_equations(game.game().0.transpose());
     println!(
         "Смешанная стратегия A: ({:.3}, {:.3}, {:.3})",
         a[0], a[1], a[2]
     );
-    let b = solve_linear_equations(*game.game_matrix());
+    let b = solve_linear_equations(game.game().0);
     println!(
         "Смешанная стратегия B: ({:.3}, {:.3}, {:.3})",
         b[0], b[1], b[2]
@@ -64,8 +44,16 @@ fn main() {
         iteration,
         a_strategy,
         b_strategy,
-        a_score,
-        b_score,
+        a_score:
+            Matrix1x3 {
+                data: ArrayStorage([[a0], [a1], [a2]]),
+                ..
+            },
+        b_score:
+            Matrix1x3 {
+                data: ArrayStorage([[b0], [b1], [b2]]),
+                ..
+            },
         high_price,
         low_price,
         epsilon,
@@ -75,12 +63,12 @@ fn main() {
             iteration,
             format!("x{}", a_strategy + 1),
             format!("y{}", b_strategy + 1),
-            a_score[0],
-            a_score[1],
-            a_score[2],
-            b_score[0],
-            b_score[1],
-            b_score[2],
+            a0,
+            a1,
+            a2,
+            b0,
+            b1,
+            b2,
             format!("{high_price:.3}"),
             format!("{low_price:.3}"),
             format!("{epsilon:.3}"),
@@ -106,17 +94,28 @@ fn main() {
         b_strategy_used.map(|v| format!("{v}/{k}={:.3}", v as f64 / k as f64))
     );
 
-    match File::create("output.csv") {
-        Ok(file) => match table.to_csv(file) {
-            Ok(_) => {
-                println!("CSV file generated successfully");
-            }
+    if let Some(output_file) = options.output_file {
+        match File::create(output_file) {
+            Ok(file) => match table.to_csv(file) {
+                Ok(_) => {
+                    println!("CSV file generated successfully");
+                }
+                Err(e) => {
+                    eprintln!("Failed to write CSV to file: {e}");
+                }
+            },
             Err(e) => {
-                eprintln!("Failed to write CSV to file: {e}");
+                eprintln!("Failed to open file: {e}");
             }
-        },
-        Err(e) => {
-            eprintln!("Failed to open file: {e}");
         }
     }
+}
+
+/// Command line op
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct Options {
+    /// Name of the output file to which the CSV will be written.
+    #[arg(long, short)]
+    output_file: Option<PathBuf>,
 }

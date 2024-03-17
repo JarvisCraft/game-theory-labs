@@ -1,19 +1,21 @@
 //! Implementation of the Brown-Robinson method.
 
-mod iter;
-
 use nalgebra::{
-    one, ArrayStorage, ComplexField, Matrix1x3, Matrix1x4, Matrix3, Matrix4x1, Scalar,
+    ArrayStorage, ComplexField, Matrix1x3, Matrix1x4, Matrix3, Matrix4x1, one, Scalar,
     SimdPartialOrd,
 };
 use num_traits::{float::FloatCore, Zero};
 use ordered_float::NotNan;
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
+
+use game_theory::zero_sum::Game;
+
+mod iter;
 
 const M: usize = 3;
 const N: usize = 3;
 
-// TODO: get rid of hardcode
+// TODO: get rid of the exact used type
 type Value = f64;
 
 pub struct BrownRobinsonRow<T> {
@@ -37,7 +39,7 @@ pub struct BrownRobinsonRow<T> {
 
 // Итератор по шагам метода
 pub struct BrownRobinson<T> {
-    game_matrix: Matrix3<T>,
+    game: Game<Matrix3<T>>,
     a_strategy: usize,
     b_strategy: usize,
     a_scores: Matrix1x3<T>,
@@ -46,13 +48,13 @@ pub struct BrownRobinson<T> {
     max_low_price: T,
     a_strategy_used: [usize; M],
     b_strategy_used: [usize; N],
+    /// The number of the current iteration.
     k: usize,
 }
 
 impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
     #[must_use]
-    pub fn new(game_matrix: [[T; M]; N]) -> Self {
-        let game_matrix = Matrix3::from_data(ArrayStorage(game_matrix));
+    pub fn new(game_matrix: Matrix3<T>) -> Self {
         let a_strategy = thread_rng().gen_range(0..M);
         let b_strategy = thread_rng().gen_range(0..N);
 
@@ -67,7 +69,7 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
         b_strategy_used[b_strategy] = 1;
 
         Self {
-            game_matrix,
+            game: Game::new(game_matrix),
             a_strategy,
             b_strategy,
             a_scores,
@@ -86,13 +88,15 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
         T: FloatCore,
     {
         let max_min = self
-            .game_matrix
+            .game
+            .0
             .column_iter()
             .map(|row| NotNan::new(row.min()).unwrap())
             .max()
             .unwrap();
         let min_max = self
-            .game_matrix
+            .game
+            .0
             .row_iter()
             .map(|row| NotNan::new(row.max()).unwrap())
             .min()
@@ -103,8 +107,8 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
     }
 
     #[must_use]
-    pub fn game_matrix(&self) -> &Matrix3<T> {
-        &self.game_matrix
+    pub fn game(&self) -> &Game<Matrix3<T>> {
+        &self.game
     }
 
     #[must_use]
@@ -141,23 +145,13 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
 
 // TODO: encapsulate
 pub fn solve_linear_equations<T: ComplexField>(matrix: Matrix3<T>) -> Matrix1x4<T> {
-    // FIXME: use relative addressing and zero assignment zero
-    let matrix = matrix.insert_fixed_rows::<1>(3, one());
-    let mut matrix = matrix.insert_fixed_columns::<1>(3, -T::one());
-    // FIXME: use relative addressing and zero assignment zero
-    matrix[(3, 3)] = T::zero();
+    let rows = matrix.nrows();
+    let matrix = matrix.insert_fixed_rows::<1>(rows, one());
+    let columns = matrix.ncols();
+    let mut matrix = matrix.insert_fixed_columns::<1>(columns, -T::one());
+    matrix[(rows, columns)] = T::zero();
     let a = matrix;
-    println!("{a}");
 
-    // let row_0 = matrix.row(0).data.to_owned();
-    // let row_1 = matrix.row(1).data.to_owned();
-    // let row_2 = matrix.row(2).data.to_owned();
-    // let a = Matrix4::from_data(ArrayStorage([
-    //     [row_0[0], row_0[1], row_0[2], -T::one()],
-    //     [row_1[0], row_1[1], row_1[2], -T::one()],
-    //     [row_2[0], row_2[1], row_2[2], -T::one()],
-    //     [T::one(), T::one(), T::one(), T::zero()],
-    // ]));
     let b = Matrix4x1::from_data(ArrayStorage([[T::zero(), T::zero(), T::zero(), T::one()]]));
 
     a.lu().solve(&b).unwrap().transpose()
