@@ -4,7 +4,7 @@ use clap::Parser;
 use nalgebra::{ArrayStorage, matrix, Matrix1x3};
 use prettytable::{format::consts::FORMAT_BOX_CHARS, row, table};
 
-use brown_robinson_method::{BrownRobinson, BrownRobinsonRow, solve_linear_equations};
+use brown_robinson_method::{BrownRobinson, BrownRobinsonRow};
 
 fn main() {
     let options = Options::parse();
@@ -22,12 +22,14 @@ fn main() {
 
     let (min, max) = game.bounds();
     println!("Нижняя цена игры: {min}, верхняя цена игры: {max}");
-    let a = solve_linear_equations(game.game().0.transpose());
+    let Some((a, b)) = game.game().solve_analytically() else {
+        eprintln!("Система не имеет решений");
+        return;
+    };
     println!(
         "Смешанная стратегия A: ({:.3}, {:.3}, {:.3})",
         a[0], a[1], a[2]
     );
-    let b = solve_linear_equations(game.game().0);
     println!(
         "Смешанная стратегия B: ({:.3}, {:.3}, {:.3})",
         b[0], b[1], b[2]

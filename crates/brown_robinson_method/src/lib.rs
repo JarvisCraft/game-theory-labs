@@ -142,17 +142,3 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
         self.b_scores.min()
     }
 }
-
-// TODO: encapsulate
-pub fn solve_linear_equations<T: ComplexField>(matrix: Matrix3<T>) -> Matrix1x4<T> {
-    let rows = matrix.nrows();
-    let matrix = matrix.insert_fixed_rows::<1>(rows, one());
-    let columns = matrix.ncols();
-    let mut matrix = matrix.insert_fixed_columns::<1>(columns, -T::one());
-    matrix[(rows, columns)] = T::zero();
-    let a = matrix;
-
-    let b = Matrix4x1::from_data(ArrayStorage([[T::zero(), T::zero(), T::zero(), T::one()]]));
-
-    a.lu().solve(&b).unwrap().transpose()
-}
