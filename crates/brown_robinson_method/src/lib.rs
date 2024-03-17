@@ -1,8 +1,8 @@
 //! Implementation of the Brown-Robinson method.
 
 use nalgebra::{
-    ArrayStorage, ComplexField, Matrix1x3, Matrix1x4, Matrix3, Matrix4x1, one, Scalar,
-    SimdPartialOrd,
+    allocator::Allocator, DefaultAllocator, Dim, Matrix, OMatrix, Scalar, SimdPartialOrd, Storage,
+    U1,
 };
 use num_traits::{float::FloatCore, Zero};
 use ordered_float::NotNan;
@@ -12,13 +12,13 @@ use game_theory::zero_sum::Game;
 
 mod iter;
 
-const M: usize = 3;
-const N: usize = 3;
-
 // TODO: get rid of the exact used type
 type Value = f64;
 
-pub struct BrownRobinsonRow<T> {
+pub struct BrownRobinsonRow<T, N: Dim>
+where
+    DefaultAllocator: Allocator<T, U1, N>,
+{
     /// Номер текущей итерации
     pub iteration: usize,
     /// Текущая стратегия игрока A
@@ -26,9 +26,9 @@ pub struct BrownRobinsonRow<T> {
     /// Текущая стратегия игрока B
     pub b_strategy: usize,
     /// Накопленный выигрыш игрока A
-    pub a_score: Matrix1x3<T>,
+    pub a_score: OMatrix<T, U1, N>,
     /// Накопленный выигрыш игрока B
-    pub b_score: Matrix1x3<T>,
+    pub b_score: OMatrix<T, U1, N>,
     /// Верхняя цена игры
     pub high_price: T,
     /// Нижняя цена игры
@@ -38,35 +38,41 @@ pub struct BrownRobinsonRow<T> {
 }
 
 // Итератор по шагам метода
-pub struct BrownRobinson<T> {
-    game: Game<Matrix3<T>>,
+pub struct BrownRobinson<T, N: Dim, S: Storage<T, N, N>>
+where
+    DefaultAllocator: Allocator<usize, U1, N> + Allocator<T, U1, N>,
+{
+    game: Game<Matrix<T, N, N, S>>,
     a_strategy: usize,
     b_strategy: usize,
-    a_scores: Matrix1x3<T>,
-    b_scores: Matrix1x3<T>,
+    a_scores: OMatrix<T, U1, N>,
+    b_scores: OMatrix<T, U1, N>,
     min_high_price: T,
     max_low_price: T,
-    a_strategy_used: [usize; M],
-    b_strategy_used: [usize; N],
+    a_strategy_times_used: OMatrix<usize, U1, N>,
+    b_strategy_times_used: OMatrix<usize, U1, N>,
     /// The number of the current iteration.
     k: usize,
 }
 
-impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
+impl<T: Scalar + Zero + SimdPartialOrd, N: Dim, S: Storage<T, N, N>> BrownRobinson<T, N, S>
+where
+    DefaultAllocator: Allocator<usize, U1, N> + Allocator<T, U1, N>,
+{
     #[must_use]
-    pub fn new(game_matrix: Matrix3<T>) -> Self {
-        let a_strategy = thread_rng().gen_range(0..M);
-        let b_strategy = thread_rng().gen_range(0..N);
+    pub fn new(game_matrix: Matrix<T, N, N, S>) -> Self {
+        let a_strategy = thread_rng().gen_range(0..game_matrix.nrows());
+        let b_strategy = thread_rng().gen_range(0..game_matrix.ncols());
 
         let a_scores = game_matrix.row(a_strategy).clone_owned();
         let b_scores = game_matrix.column(b_strategy).transpose().clone_owned();
         let min_high_price = a_scores.max();
         let max_low_price = b_scores.min();
 
-        let mut a_strategy_used = [0; M];
-        a_strategy_used[a_strategy] = 1;
-        let mut b_strategy_used = [0; N];
-        b_strategy_used[b_strategy] = 1;
+        let mut a_strategy_times_used = Matrix::zeros_generic(U1, game_matrix.shape_generic().0);
+        a_strategy_times_used[a_strategy] = 1;
+        let mut b_strategy_times_used = Matrix::zeros_generic(U1, game_matrix.shape_generic().1);
+        b_strategy_times_used[b_strategy] = 1;
 
         Self {
             game: Game::new(game_matrix),
@@ -76,8 +82,8 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
             b_scores,
             min_high_price,
             max_low_price,
-            a_strategy_used,
-            b_strategy_used,
+            a_strategy_times_used,
+            b_strategy_times_used,
             k: 0,
         }
     }
@@ -107,7 +113,7 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
     }
 
     #[must_use]
-    pub fn game(&self) -> &Game<Matrix3<T>> {
+    pub fn game(&self) -> &Game<Matrix<T, N, N, S>> {
         &self.game
     }
 
@@ -122,8 +128,8 @@ impl<T: Scalar + Zero + SimdPartialOrd> BrownRobinson<T> {
     }
 
     #[must_use]
-    pub fn strategies_used(&self) -> ([usize; M], [usize; N]) {
-        (self.a_strategy_used, self.b_strategy_used)
+    pub fn strategies_used(&self) -> (&OMatrix<usize, U1, N>, &OMatrix<usize, U1, N>) {
+        (&self.a_strategy_times_used, &self.b_strategy_times_used)
     }
 
     #[must_use]

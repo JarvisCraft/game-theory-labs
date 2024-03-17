@@ -2,13 +2,18 @@
 
 use std::iter::FusedIterator;
 
-use nalgebra::Matrix1x3;
+use nalgebra::{allocator::Allocator, DefaultAllocator, Dim, Storage, U1};
 use ordered_float::NotNan;
 use rand::{prelude::SliceRandom, thread_rng};
 
-use super::{BrownRobinson, BrownRobinsonRow, Value};
+use super::{BrownRobinson, BrownRobinsonRow};
 
-impl BrownRobinson<Value> {
+type T = super::Value;
+
+impl<N: Dim, S: Storage<T, N, N>> BrownRobinson<T, N, S>
+where
+    DefaultAllocator: Allocator<usize, U1, N> + Allocator<T, U1, N>,
+{
     fn next_strategies(&self) -> (usize, usize) {
         let Self {
             a_scores, b_scores, ..
@@ -44,8 +49,11 @@ impl BrownRobinson<Value> {
     }
 }
 
-impl Iterator for BrownRobinson<Value> {
-    type Item = BrownRobinsonRow<Value>;
+impl<N: Dim, S: Storage<T, N, N>> Iterator for BrownRobinson<T, N, S>
+where
+    DefaultAllocator: Allocator<usize, U1, N> + Allocator<T, U1, N>,
+{
+    type Item = BrownRobinsonRow<T, N>;
 
     /// Осуществляет шаг алгоритма Брауна-Робинсон.
     fn next(&mut self) -> Option<Self::Item> {
@@ -55,14 +63,14 @@ impl Iterator for BrownRobinson<Value> {
         } else {
             let (a_strategy, b_strategy) = self.next_strategies();
             self.a_strategy = a_strategy;
-            self.a_strategy_used[a_strategy] += 1;
+            self.a_strategy_times_used[a_strategy] += 1;
             self.b_strategy = b_strategy;
-            self.b_strategy_used[b_strategy] += 1;
-            self.a_scores += Matrix1x3::from(self.game.0.row(b_strategy));
-            self.b_scores += Matrix1x3::from(self.game.0.column(a_strategy).transpose());
+            self.b_strategy_times_used[b_strategy] += 1;
+            self.a_scores += self.game.0.row(b_strategy);
+            self.b_scores += self.game.0.column(a_strategy).transpose();
 
-            let high_price = self.high_price() / self.k as Value;
-            let low_price = self.low_price() / self.k as Value;
+            let high_price = self.high_price() / self.k as T;
+            let low_price = self.low_price() / self.k as T;
 
             self.min_high_price = self.min_high_price.min(high_price);
             self.max_low_price = self.max_low_price.max(low_price);
@@ -74,8 +82,8 @@ impl Iterator for BrownRobinson<Value> {
             iteration: self.k,
             a_strategy: self.a_strategy,
             b_strategy: self.b_strategy,
-            a_score: self.a_scores,
-            b_score: self.b_scores,
+            a_score: self.a_scores.clone_owned(),
+            b_score: self.b_scores.clone_owned(),
             high_price,
             low_price,
             epsilon: self.min_high_price - self.max_low_price,
@@ -83,4 +91,7 @@ impl Iterator for BrownRobinson<Value> {
     }
 }
 
-impl<T> FusedIterator for BrownRobinson<T> where Self: Iterator {}
+impl<N: Dim, S: Storage<T, N, N>> FusedIterator for BrownRobinson<T, N, S> where
+    DefaultAllocator: Allocator<usize, U1, N> + Allocator<T, U1, N>
+{
+}
