@@ -85,13 +85,16 @@ where
         let columns = matrix.ncols();
         let mut matrix = matrix.insert_fixed_columns::<1>(columns, -T::one());
         *matrix
-            .as_mut_slice()
-            .last_mut()
-            .expect("The matrix has at least one row and at least one column") = T::zero();
+            .iter_mut()
+            .last()
+            .expect("the matrix should have at least one row and at least one column") = T::zero();
         let a = matrix;
 
         let n = a.shape_generic().1;
-        solve::<T, DimMinimum<DimPlus1<N>, DimPlus1<N>>, _, _>(a, Matrix::zeros_generic(n, U1))
+        let mut b = Matrix::zeros_generic(n, U1);
+        *b.iter_mut().last().expect("the matrix should have at least one value") = T::one();
+
+        solve::<T, DimMinimum<DimPlus1<N>, DimPlus1<N>>, _, _>(a, b)
     }
 }
 
