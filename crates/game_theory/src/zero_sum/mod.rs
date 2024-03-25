@@ -4,11 +4,7 @@
 
 use std::{fmt, fmt::Formatter};
 
-use nalgebra::{
-    allocator::{Allocator, Reallocator},
-    ComplexField, DefaultAllocator, Dim, DimAdd, DimMin, DimMinimum, DimSum, Matrix, OMatrix,
-    RawStorageMut, Storage, U1,
-};
+use nalgebra::{allocator::{Allocator, Reallocator}, ComplexField, DefaultAllocator, Dim, DimAdd, DimMin, DimMinimum, DimSum, DMatrix, Matrix, OMatrix, RawStorageMut, Storage, U1};
 
 pub use parse::FromStrError as GameFromStrError;
 
@@ -18,6 +14,8 @@ mod parse;
 #[non_exhaustive]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Game<M>(pub M);
+
+pub type DGame<T> = Game<DMatrix<T>>;
 
 impl<M: fmt::Display> fmt::Display for Game<M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

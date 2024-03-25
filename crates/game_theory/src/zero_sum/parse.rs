@@ -3,38 +3,40 @@ use std::str::FromStr;
 use nalgebra::{dmatrix, DMatrix, Dyn, VecStorage};
 use peg::{error::ParseError, str::LineCol};
 
-use super::Game;
+use super::{DGame, Game};
 
 #[derive(thiserror::Error, Debug)]
-#[error("invalid matrix expression")]
+#[error(transparent)]
 pub struct FromStrError(#[from] ParseError<LineCol>);
 
+/// Converts the rows into a dynamic matrix.
 fn dmatrix_from_rows<T>(rows: Vec<Vec<T>>) -> Result<DMatrix<T>, &'static str> {
     let Some(row_len) = rows.first().map(Vec::len) else {
         return Ok(dmatrix![]);
     };
-    let row_count = rows.len();
 
+    let row_count = rows.len();
     let mut data = Vec::with_capacity(
         row_len
             .checked_mul(row_count)
             .ok_or("there are too many values in the matrix")?,
     );
 
-    for row in rows {
-        if row.len() != row_len {
-            return Err("row lengths don't match");
+    // `VecStorage` uses column-major order, so we have to transpose the matrix
+
+    let mut rows: Vec<_> = rows.into_iter().map(|row| row.into_iter()).collect();
+    for _ in 0..row_len {
+        for row in &mut rows {
+            data.push(row.next().ok_or("row lengths don't match")?);
         }
-        data.extend(row);
     }
 
-    let matrix = DMatrix::from_vec_storage(VecStorage::new(Dyn(row_count), Dyn(row_len), data));
-    Ok(matrix)
+    Ok(DMatrix::from_vec_storage(VecStorage::new(Dyn(row_count), Dyn(row_len), data)))
 }
 
 peg::parser! {
     grammar game() for str {
-        pub rule dynamic() -> Game<DMatrix<f64>> = "{" _ rows:(row() ** ";") _ "}" {?
+        pub rule dynamic() -> DGame<f64> = "{" _ rows:(row() ** ";") _ "}" {?
             Ok(Game(dmatrix_from_rows(rows)?))
         }
 
@@ -58,30 +60,13 @@ peg::parser! {
     }
 }
 
-impl FromStr for Game<DMatrix<f64>> {
+impl FromStr for DGame<f64> {
     type Err = FromStrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(game::dynamic(s)?)
     }
 }
-//
-// // TODO: generics
-// impl<const N: usize, T: FromStr> FromStr
-//     for Game<Matrix<T, Const<N>, Const<N>, ArrayStorage<T, N, N>>>
-// {
-//     type Err = FromStrError;
-//
-//     fn from_str(s: &str) -> Result<Self, Self::Err> {
-//         let rows = s.splitn(N, ';');
-//         // for row in rows {
-//         //     let drow = DVector::from_data(vec![1, 2]);
-//         // }
-//         let dynamic = DMatrix::from_vec_storage(VecStorage::new(Dyn(N), Dyn(N), vec![1; N * N]));
-//
-//         Ok(Game::new(dynamic.try_into().unwrap()))
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
