@@ -6,3 +6,4 @@ edition.workspace = true
 [dependencies]
 nalgebra.workspace = true
 thiserror.workspace = true
+peg.workspace = true

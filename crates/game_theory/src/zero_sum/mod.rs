@@ -10,9 +10,13 @@ use nalgebra::{
     RawStorageMut, Storage, U1,
 };
 
+pub use parse::FromStrError as GameFromStrError;
+
+mod parse;
+
 /// A zeros-sum game defined by its matrix.
 #[non_exhaustive]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Game<M>(pub M);
 
 impl<M: fmt::Display> fmt::Display for Game<M> {
