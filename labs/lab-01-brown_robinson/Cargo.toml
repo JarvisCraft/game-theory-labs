@@ -6,12 +6,5 @@ edition = "2021"
 [dependencies]
 game_theory.workspace = true
 brown_robinson_method.workspace = true
-nalgebra.workspace = true
-ordered-float.workspace = true
-rational.workspace = true
 prettytable.workspace = true
-rand.workspace = true
 clap = { workspace = true, features = ["derive"] }
-
-[features]
-example = []

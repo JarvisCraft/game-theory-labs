@@ -250,11 +250,7 @@ dependencies = [
  "brown_robinson_method",
  "clap",
  "game_theory",
- "nalgebra",
- "ordered-float",
  "prettytable",
- "rand",
- "rational",
 ]
 
 [[package]]
@@ -470,12 +466,6 @@ checksum = "ec0be4795e2f6a28069bec0b5ff3e2ac9bafc99e6a9a7dc3547996c5c816922c"
 dependencies = [
  "getrandom",
 ]
-
-[[package]]
-name = "rational"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04cb5b80a07a398dd9368df8c2e8ae1be87d960a9a64a8c2a2f7996bf7ce4fac"
 
 [[package]]
 name = "rawpointer"
