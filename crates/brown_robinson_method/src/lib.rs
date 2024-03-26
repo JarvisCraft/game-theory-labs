@@ -1,14 +1,13 @@
 //! Implementation of the Brown-Robinson method.
 
+use game_theory::{ext::ComplexFieldExt, zero_sum::Game};
 use nalgebra::{
-    allocator::Allocator, DefaultAllocator, Dim, Matrix, OMatrix, Scalar, SimdPartialOrd, Storage,
-    U1,
+    allocator::Allocator, ComplexField, DefaultAllocator, Dim, Matrix, OMatrix, OVector, Scalar,
+    SimdPartialOrd, Storage, U1,
 };
 use num_traits::{float::FloatCore, Zero};
 use ordered_float::NotNan;
-use rand::{Rng, thread_rng};
-
-use game_theory::zero_sum::Game;
+use rand::{thread_rng, Rng};
 
 mod iter;
 
@@ -96,15 +95,15 @@ where
         let max_min = self
             .game
             .0
-            .column_iter()
+            .row_iter()
             .map(|row| NotNan::new(row.min()).unwrap())
             .max()
             .unwrap();
         let min_max = self
             .game
             .0
-            .row_iter()
-            .map(|row| NotNan::new(row.max()).unwrap())
+            .column_iter()
+            .map(|column| NotNan::new(column.max()).unwrap())
             .min()
             .unwrap();
 
@@ -113,23 +112,39 @@ where
     }
 
     #[must_use]
-    pub fn game(&self) -> &Game<Matrix<T, N, N, S>> {
+    pub const fn game(&self) -> &Game<Matrix<T, N, N, S>> {
         &self.game
     }
 
     #[must_use]
-    pub fn min_max_prices(&self) -> (&T, &T) {
+    pub const fn min_max_prices(&self) -> (&T, &T) {
         (&self.max_low_price, &self.min_high_price)
     }
 
     #[must_use]
-    pub fn k(&self) -> usize {
+    pub fn price_estimation(&self) -> T
+    where
+        T: ComplexField,
+    {
+        let (max_low_price, min_high_price) = self.min_max_prices();
+        (max_low_price.clone() + min_high_price.clone()) / T::two()
+    }
+
+    #[must_use]
+    pub const fn k(&self) -> usize {
         self.k
     }
 
     #[must_use]
-    pub fn strategies_used(&self) -> (&OMatrix<usize, U1, N>, &OMatrix<usize, U1, N>) {
-        (&self.a_strategy_times_used, &self.b_strategy_times_used)
+    pub fn strategies_used(&self) -> (OVector<usize, N>, OVector<usize, N>)
+    where
+        DefaultAllocator: Allocator<usize, N>,
+    {
+        // FIXME: don't transpose, just store the values in the right way
+        (
+            self.a_strategy_times_used.transpose(),
+            self.b_strategy_times_used.transpose(),
+        )
     }
 
     #[must_use]

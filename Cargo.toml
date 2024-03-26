@@ -14,13 +14,18 @@ edition = "2021"
 game_theory = { path = "crates/game_theory", version = "0.1.0" }
 brown_robinson_method = { path = "crates/brown_robinson_method", version = "0.1.0" }
 continuous_convex_concave_method = { path = "crates/continuous_convex_concave_method", version = "0.1.0" }
-# dependencies
+# maths
 num-traits = "0.2.18"
 nalgebra = "0.32.4"
 ordered-float = "4.2"
 rational = "1.5"
+# visualization
 prettytable = "0.10"
+# misc
 rand = "0.8.5"
-clap = "4.5.3"
 thiserror = "1.0.58"
 peg = "0.8.2"
+# IO
+clap = "4.5.3"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"

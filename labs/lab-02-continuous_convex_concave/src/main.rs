@@ -1,6 +1,8 @@
-use clap::Parser;
+use std::{num::NonZeroUsize, thread, time::Duration};
 
-use continuous_convex_concave_method::ContinuousConcaveGame;
+use clap::Parser;
+use continuous_convex_concave_method::ContinuousConvexConcaveGame;
+use tracing::info;
 
 #[derive(thiserror::Error, Debug)]
 enum Error {
@@ -11,11 +13,22 @@ enum Error {
 }
 
 fn main() -> Result<(), Error> {
-    let Options { a, b, c, d, e } = Options::parse();
-    let game = ContinuousConcaveGame::new([a, b, c, d, e]);
+    let Options {
+        a,
+        b,
+        c,
+        d,
+        e,
+        accuracy,
+        windows,
+    } = Options::parse();
+
+    tracing_subscriber::fmt::init();
+
+    let game = ContinuousConvexConcaveGame::new([a, b, c, d, e]);
 
     let (h_xx, h_yy) = (game.h_xx(), game.h_yy());
-    println!("h_xx = {h_xx:.3}; h_yy = {h_yy:.3}");
+    info!("h_xx = {h_xx:.3}; h_yy = {h_yy:.3}");
     if h_xx >= 0. {
         return Err(Error::NonNegativeHxx(h_xx));
     }
@@ -24,11 +37,17 @@ fn main() -> Result<(), Error> {
     }
 
     let (x_formula, y_formula) = game.x_y_formulas();
-    println!("{{ {x_formula}");
-    println!("{{ {y_formula}");
+    info!("{{ {x_formula}");
+    info!("{{ {y_formula}");
 
-    let ((x, y), solved) = game.solve_analytically();
-    print!("H({x:.3}, {y:.3}) = {solved:.3}");
+    let ((x, y), h) = game.solve_analytically();
+    info!("H({x:.3}, {y:.3}) = {h:.3}");
+
+    let mut game = game.iter(accuracy, windows);
+    while let Some(state) = game.next() {
+        thread::sleep_ms(1000);
+        info!(n = game.n(), "Iteration produced state {:?}", state);
+    }
 
     Ok(())
 }
@@ -44,4 +63,12 @@ struct Options {
     c: f64,
     d: f64,
     e: f64,
+
+    /// The required accuracy for the iterative method
+    #[arg(long, short, default_value_t = 0.1)]
+    accuracy: f64,
+
+    /// The size of the window for the iterative method
+    #[arg(long, short, default_value_t = NonZeroUsize::new(10).unwrap())]
+    windows: NonZeroUsize,
 }

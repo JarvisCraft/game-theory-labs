@@ -1,13 +1,16 @@
 use std::{
     fmt::{self, Display, Formatter},
+    num::NonZeroUsize,
     write,
 };
 
 use formula::{XFormula, YFormula};
 use game_theory::ext::ComplexFieldExt;
+use iter::Iter;
 use nalgebra::ComplexField;
 
 mod formula;
+mod iter;
 
 /// A zero-sum game in a form:
 ///
@@ -15,18 +18,18 @@ mod formula;
 /// H(x, y) = ax^2 + by^2 + cxy + dx + ey
 /// ```
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ContinuousConcaveGame<T> {
+pub struct ContinuousConvexConcaveGame<T> {
     coefficients: [T; 5],
 }
 
-impl<T> ContinuousConcaveGame<T> {
+impl<T> ContinuousConvexConcaveGame<T> {
     #[must_use]
     pub fn new(coefficients: [T; 5]) -> Self {
         Self { coefficients }
     }
 }
 
-impl<T: ComplexField> ContinuousConcaveGame<T> {
+impl<T: ComplexField> ContinuousConvexConcaveGame<T> {
     /// Computes the value of the kernel function for the given parameters `x` and `y`.
     #[must_use]
     pub fn compute(&self, x: T, y: T) -> T {
@@ -119,13 +122,18 @@ impl<T: ComplexField> ContinuousConcaveGame<T> {
         let x = (c.clone() * e.clone() - b_mul_2.clone() * d.clone())
             / (T::two() * a.clone() * b_mul_2.clone() - c.clone() * c.clone());
         let y = (-c.clone() * x.clone() - e.clone()) / b_mul_2;
-        let computed = self.compute(x.clone(), y.clone());
+        let h = self.compute(x.clone(), y.clone());
 
-        ((x, y), computed)
+        ((x, y), h)
+    }
+
+    #[must_use]
+    pub fn iter(self, accuracy: T, window_size: NonZeroUsize) -> Iter<T> {
+        Iter::new(self, accuracy, window_size)
     }
 }
 
-impl<T: Display> Display for ContinuousConcaveGame<T> {
+impl<T: Display> Display for ContinuousConvexConcaveGame<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let Self {
             coefficients: [a, b, c, d, e],

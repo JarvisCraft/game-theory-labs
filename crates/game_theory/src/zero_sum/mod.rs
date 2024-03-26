@@ -4,8 +4,11 @@
 
 use std::{fmt, fmt::Formatter};
 
-use nalgebra::{allocator::{Allocator, Reallocator}, ComplexField, DefaultAllocator, Dim, DimAdd, DimMin, DimMinimum, DimSum, DMatrix, Matrix, OMatrix, RawStorageMut, Storage, U1};
-
+use nalgebra::{
+    allocator::{Allocator, Reallocator},
+    ComplexField, DMatrix, DVector, DefaultAllocator, Dim, DimAdd, DimMin, DimMinimum, DimSum, Dyn,
+    Matrix, OMatrix, RawStorageMut, SimdPartialOrd, Storage, VecStorage, U1,
+};
 pub use parse::FromStrError as GameFromStrError;
 
 mod parse;
@@ -20,7 +23,7 @@ pub type DGame<T> = Game<DMatrix<T>>;
 impl<M: fmt::Display> fmt::Display for Game<M> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let Self(matrix) = self;
-        write!(f, "{matrix}")
+        matrix.fmt(f)
     }
 }
 
@@ -34,6 +37,7 @@ impl<M> Game<M> {
 pub type Strategy<T, N: DimAdd<U1>> = OMatrix<T, DimPlus1<N>, U1>;
 
 impl<T: ComplexField, N: Dim, S: Storage<T, N, N>> Game<Matrix<T, N, N, S>> {
+    #[must_use]
     pub fn solve_analytically(&self) -> Option<(Strategy<T, N>, Strategy<T, N>)>
     where
         N: DimAdd<U1>,
@@ -54,6 +58,43 @@ impl<T: ComplexField, N: Dim, S: Storage<T, N, N>> Game<Matrix<T, N, N, S>> {
             (None, None) => None,
             _ => unreachable!("Either both games are solvable or both games are not solvable"),
         }
+    }
+
+    // TODO: maybe, use a more economical return-type of the matrix ones,
+    //  since the dimensions are well-defined
+
+    #[must_use]
+    pub fn min_win_a(&self) -> DVector<T>
+    where
+        T: SimdPartialOrd,
+    {
+        let data: Vec<_> = self.0.row_iter().map(|row| row.min()).collect();
+        DVector::from_data(VecStorage::new(Dyn(data.len()), U1, data))
+    }
+
+    #[must_use]
+    pub fn max_loss_b(&self) -> DVector<T>
+    where
+        T: SimdPartialOrd,
+    {
+        let data: Vec<_> = self.0.column_iter().map(|row| row.max()).collect();
+        DVector::from_data(VecStorage::new(Dyn(data.len()), U1, data))
+    }
+
+    #[must_use]
+    pub fn lowest_price(&self) -> (usize, T)
+    where
+        T: PartialOrd + SimdPartialOrd,
+    {
+        self.min_win_a().argmax()
+    }
+
+    #[must_use]
+    pub fn highest_price(&self) -> (usize, T)
+    where
+        T: PartialOrd + SimdPartialOrd,
+    {
+        self.max_loss_b().argmin()
     }
 }
 
@@ -92,7 +133,9 @@ where
 
         let n = a.shape_generic().1;
         let mut b = Matrix::zeros_generic(n, U1);
-        *b.iter_mut().last().expect("the matrix should have at least one value") = T::one();
+        *b.iter_mut()
+            .last()
+            .expect("the matrix should have at least one value") = T::one();
 
         solve::<T, DimMinimum<DimPlus1<N>, DimPlus1<N>>, _, _>(a, b)
     }

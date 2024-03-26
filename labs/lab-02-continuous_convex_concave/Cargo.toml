@@ -9,3 +9,5 @@ continuous_convex_concave_method.workspace = true
 prettytable.workspace = true
 clap = { workspace = true, features = ["derive"] }
 thiserror.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
