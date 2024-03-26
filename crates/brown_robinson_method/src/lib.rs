@@ -8,6 +8,7 @@ use nalgebra::{
 use num_traits::{float::FloatCore, Zero};
 use ordered_float::NotNan;
 use rand::{thread_rng, Rng};
+use tracing::{debug, instrument, trace};
 
 mod iter;
 
@@ -59,19 +60,28 @@ where
     DefaultAllocator: Allocator<usize, U1, N> + Allocator<T, U1, N>,
 {
     #[must_use]
+    #[instrument(name = "Init Brown-Robinson method", skip(game_matrix))]
     pub fn new(game_matrix: Matrix<T, N, N, S>) -> Self {
         let a_strategy = thread_rng().gen_range(0..game_matrix.nrows());
         let b_strategy = thread_rng().gen_range(0..game_matrix.ncols());
 
-        let a_scores = game_matrix.row(a_strategy).clone_owned();
-        let b_scores = game_matrix.column(b_strategy).transpose().clone_owned();
+        let a_scores = game_matrix.column(a_strategy).transpose();
+        let b_scores = game_matrix.row(b_strategy).clone_owned();
         let min_high_price = a_scores.max();
         let max_low_price = b_scores.min();
+
+        trace!("Using random strategies: [{a_strategy}]={a_scores:.3?} and [{b_strategy}]={b_scores:.3?}");
 
         let mut a_strategy_times_used = Matrix::zeros_generic(U1, game_matrix.shape_generic().0);
         a_strategy_times_used[a_strategy] = 1;
         let mut b_strategy_times_used = Matrix::zeros_generic(U1, game_matrix.shape_generic().1);
         b_strategy_times_used[b_strategy] = 1;
+
+        debug!(
+            "Initial strategies use-count: A:{:.3?}, B:{:.3?}",
+            a_strategy_times_used.as_slice(),
+            b_strategy_times_used.as_slice(),
+        );
 
         Self {
             game: Game::new(game_matrix),

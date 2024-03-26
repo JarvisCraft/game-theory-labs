@@ -86,6 +86,7 @@ dependencies = [
  "num-traits",
  "ordered-float",
  "rand",
+ "tracing",
 ]
 
 [[package]]

@@ -9,3 +9,4 @@ num-traits.workspace = true
 ordered-float.workspace = true
 rand.workspace = true
 nalgebra.workspace = true
+tracing.workspace = true

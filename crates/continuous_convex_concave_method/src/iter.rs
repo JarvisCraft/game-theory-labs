@@ -3,13 +3,13 @@ use std::{collections::VecDeque, iter::FusedIterator, num::NonZeroUsize};
 use brown_robinson_method::{BrownRobinson, BrownRobinsonRow};
 use game_theory::zero_sum::Game;
 use nalgebra::{ComplexField, DMatrix, Dyn, VecStorage};
-use tracing::{info, span, trace, warn, Level};
+use tracing::{debug, span, trace, Level};
 
-use crate::ContinuousConvexConcaveGame;
+use crate::{ContinuousConvexConcaveGame, GameSolution};
 
-pub struct Iter<T> {
+pub struct Iter<'a, T> {
     /// The iterated game
-    game: ContinuousConvexConcaveGame<T>,
+    game: &'a ContinuousConvexConcaveGame<T>,
     /// The accuracy defining the end of game
     accuracy: T,
     window_size: NonZeroUsize,
@@ -22,23 +22,16 @@ pub struct Iter<T> {
     sum_delta: T,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct State<T> {
-    x: T,
-    y: T,
-    price: T,
-}
-
 #[derive(Debug, Clone)]
 struct WindowElement<T> {
     delta: T,
-    state: State<T>,
+    state: GameSolution<T>,
 }
 
-impl<T: ComplexField> Iter<T> {
+impl<'a, T: ComplexField> Iter<'a, T> {
     #[must_use]
     pub(super) fn new(
-        game: ContinuousConvexConcaveGame<T>,
+        game: &'a ContinuousConvexConcaveGame<T>,
         accuracy: T,
         window_size: NonZeroUsize,
     ) -> Self {
@@ -61,7 +54,7 @@ impl<T: ComplexField> Iter<T> {
     }
 }
 
-impl Iter<f64> {
+impl Iter<'_, f64> {
     /// Creates game matrix for the current iteration.
     ///
     /// # Panics
@@ -89,8 +82,8 @@ impl Iter<f64> {
 }
 
 // TODO: generify on value type
-impl Iterator for Iter<f64> {
-    type Item = State<f64>;
+impl Iterator for Iter<'_, f64> {
+    type Item = GameSolution<f64>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.n = self
@@ -98,15 +91,16 @@ impl Iterator for Iter<f64> {
             .checked_add(1)
             .expect("too many iterations have happened");
 
-        let span = span!(Level::TRACE, "CoCoCo-method iteration", n = self.n);
+        let span = span!(Level::DEBUG, "CoCoCo-method iteration", n = self.n);
         let _enter = span.enter();
         trace!(delta = self.sum_delta, "Checking conditions");
 
         if self.window.is_empty() || self.sum_delta > self.accuracy {
-            warn!("============================");
-            warn!("n = {}", self.n);
-            warn!("previous_price = {:?}", self.previous_price);
-            warn!("price = {}", self.price);
+            debug!(
+                previous_price = self.previous_price,
+                price = self.price,
+                "Performing iterative step"
+            );
             trace!("Performing iteration");
 
             let game = self.current_game();
@@ -136,10 +130,10 @@ impl Iterator for Iter<f64> {
                 trace!(x, y, price = lowest_price, "Saddle point found");
                 (lowest_price, x, y)
             } else {
-                let span = span!(Level::TRACE, "Lo!=Hi", lowest_price, highest_price);
+                let span = span!(Level::TRACE, "Lo!=Hi");
                 let _enter = span.enter();
 
-                trace!("Performing brown robinson iteration");
+                trace!("Performing Brown-Robinson iteration");
                 let mut brown_robinson = BrownRobinson::new(game.0);
                 for BrownRobinsonRow { epsilon, .. } in &mut brown_robinson {
                     if epsilon < self.accuracy {
@@ -148,11 +142,9 @@ impl Iterator for Iter<f64> {
                 }
                 let price = brown_robinson.price_estimation();
                 let (a_strategy, b_strategy) = brown_robinson.strategies_used();
-                println!("a = {a_strategy}");
-                println!("b = {b_strategy}");
-                let x = dbg!(a_strategy.imax()) as f64 / divisor;
-                let y = dbg!(b_strategy.imax()) as f64 / divisor;
-                trace!(x, y, price, "Brown-Robinson method completed");
+                let x = a_strategy.imax() as f64 / divisor;
+                let y = b_strategy.imax() as f64 / divisor;
+                debug!(x, y, price, "Brown-Robinson method completed");
                 (price, x, y)
             };
             self.price = price;
@@ -167,20 +159,20 @@ impl Iterator for Iter<f64> {
                 let delta = (self.price - previous_price).abs();
                 self.window.push_back(WindowElement {
                     delta,
-                    state: State {
+                    state: GameSolution {
                         x,
                         y,
-                        price: self.price,
+                        h: self.price,
                     },
                 });
                 self.sum_delta += delta;
             }
             self.previous_price = Some(self.price);
 
-            Some(State {
+            Some(GameSolution {
                 x,
                 y,
-                price: self.price,
+                h: self.price,
             })
         } else {
             None
@@ -188,4 +180,4 @@ impl Iterator for Iter<f64> {
     }
 }
 
-impl FusedIterator for Iter<f64> {}
+impl FusedIterator for Iter<'_, f64> {}

@@ -98,7 +98,7 @@ impl<T: ComplexField> ContinuousConvexConcaveGame<T> {
     /// Solves this formula producing the values of `x` and `y`
     /// and the corresponding `H(x,y)`.
     #[must_use]
-    pub fn solve_analytically(&self) -> ((T, T), T) {
+    pub fn solve_analytically(&self) -> GameSolution<T> {
         let Self {
             coefficients: [a, b, c, d, e],
         } = self;
@@ -124,11 +124,11 @@ impl<T: ComplexField> ContinuousConvexConcaveGame<T> {
         let y = (-c.clone() * x.clone() - e.clone()) / b_mul_2;
         let h = self.compute(x.clone(), y.clone());
 
-        ((x, y), h)
+        GameSolution { x, y, h }
     }
 
     #[must_use]
-    pub fn iter(self, accuracy: T, window_size: NonZeroUsize) -> Iter<T> {
+    pub fn iter(&self, accuracy: T, window_size: NonZeroUsize) -> Iter<T> {
         Iter::new(self, accuracy, window_size)
     }
 }
@@ -140,4 +140,11 @@ impl<T: Display> Display for ContinuousConvexConcaveGame<T> {
         } = self;
         write!(f, "H(x, y) = {a}x^2 + {b}y^2 + {c}xy + {d}x + {e}y")
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct GameSolution<T> {
+    pub x: T,
+    pub y: T,
+    pub h: T,
 }

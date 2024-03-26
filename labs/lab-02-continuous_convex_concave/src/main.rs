@@ -1,7 +1,7 @@
-use std::{num::NonZeroUsize, thread, time::Duration};
+use std::num::NonZeroUsize;
 
 use clap::Parser;
-use continuous_convex_concave_method::ContinuousConvexConcaveGame;
+use continuous_convex_concave_method::{ContinuousConvexConcaveGame, GameSolution};
 use tracing::info;
 
 #[derive(thiserror::Error, Debug)]
@@ -10,6 +10,8 @@ enum Error {
     NonNegativeHxx(f64),
     #[error("h_yy={0} is not positive")]
     NonPositiveHyy(f64),
+    #[error("there is no solution for the game")]
+    NoSolution,
 }
 
 fn main() -> Result<(), Error> {
@@ -40,14 +42,14 @@ fn main() -> Result<(), Error> {
     info!("{{ {x_formula}");
     info!("{{ {y_formula}");
 
-    let ((x, y), h) = game.solve_analytically();
-    info!("H({x:.3}, {y:.3}) = {h:.3}");
+    let GameSolution { x, y, h } = game.solve_analytically();
+    info!("Analytically: H({x:.3}, {y:.3}) = {h:.3}");
 
-    let mut game = game.iter(accuracy, windows);
-    while let Some(state) = game.next() {
-        thread::sleep_ms(1000);
-        info!(n = game.n(), "Iteration produced state {:?}", state);
-    }
+    let GameSolution { x, y, h } = game
+        .iter(accuracy, windows)
+        .last()
+        .ok_or(Error::NoSolution)?;
+    info!("Iteratively: H({x:.3}, {y:.3}) = {h:.3}");
 
     Ok(())
 }
