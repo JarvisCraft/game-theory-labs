@@ -1,0 +1,11 @@
+[package]
+name = "lab-02-continuous_convex_concave"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+game_theory.workspace = true
+continuous_convex_concave_method.workspace = true
+prettytable.workspace = true
+clap = { workspace = true, features = ["derive"] }
+thiserror.workspace = true

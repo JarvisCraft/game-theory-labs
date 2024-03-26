@@ -26,11 +26,18 @@ fn main() {
     let (a_strat, a) = a.as_slice().split_last().unwrap();
     let (b_strat, b) = b.as_slice().split_last().unwrap();
     println!("Смешанная стратегия A: {a:.3?}");
-    println!("Смешанная стратегия B: {b:.3?}", );
+    println!("Смешанная стратегия B: {b:.3?}",);
     println!("Цена игры: {:.3}~{:.3}", a_strat, b_strat);
 
     let mut table = table!([
-        "k", "A", "B", "Стратегия A", "Стратегия B", "ВЦИ", "НЦИ", "ε"
+        "k",
+        "A",
+        "B",
+        "Стратегия A",
+        "Стратегия B",
+        "ВЦИ",
+        "НЦИ",
+        "ε"
     ]);
     table.set_format(*FORMAT_BOX_CHARS);
 
@@ -94,7 +101,7 @@ fn main() {
     }
 }
 
-/// Command line op
+/// Command line options of the program
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Options {

@@ -1,0 +1,8 @@
+[package]
+name = "continuous_convex_concave_method"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+game_theory.workspace = true
+nalgebra.workspace = true
