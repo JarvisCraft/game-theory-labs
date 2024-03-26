@@ -8,7 +8,7 @@ use nalgebra::{
 use num_traits::{float::FloatCore, Zero};
 use ordered_float::NotNan;
 use rand::{thread_rng, Rng};
-use tracing::{debug, instrument, trace};
+use tracing::{instrument, trace};
 
 mod iter;
 
@@ -77,7 +77,7 @@ where
         let mut b_strategy_times_used = Matrix::zeros_generic(U1, game_matrix.shape_generic().1);
         b_strategy_times_used[b_strategy] = 1;
 
-        debug!(
+        trace!(
             "Initial strategies use-count: A:{:.3?}, B:{:.3?}",
             a_strategy_times_used.as_slice(),
             b_strategy_times_used.as_slice(),

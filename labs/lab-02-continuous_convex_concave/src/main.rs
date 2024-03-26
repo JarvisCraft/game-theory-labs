@@ -28,6 +28,7 @@ fn main() -> Result<(), Error> {
     tracing_subscriber::fmt::init();
 
     let game = ContinuousConvexConcaveGame::new([a, b, c, d, e]);
+    info!("Game: {game}");
 
     let (h_xx, h_yy) = (game.h_xx(), game.h_yy());
     info!("h_xx = {h_xx:.3}; h_yy = {h_yy:.3}");

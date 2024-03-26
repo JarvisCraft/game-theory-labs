@@ -14,18 +14,12 @@ pub struct Iter<'a, T> {
     accuracy: T,
     window_size: NonZeroUsize,
 
-    window: VecDeque<WindowElement<T>>,
+    deltas: VecDeque<T>,
 
     n: usize,
     previous_price: Option<T>,
     price: T,
     sum_delta: T,
-}
-
-#[derive(Debug, Clone)]
-struct WindowElement<T> {
-    delta: T,
-    state: GameSolution<T>,
 }
 
 impl<'a, T: ComplexField> Iter<'a, T> {
@@ -39,7 +33,7 @@ impl<'a, T: ComplexField> Iter<'a, T> {
         Self {
             game,
             accuracy,
-            window: VecDeque::with_capacity(window_size.get()),
+            deltas: VecDeque::with_capacity(window_size.get()),
             window_size,
             n: 1,
             previous_price: None,
@@ -95,16 +89,12 @@ impl Iterator for Iter<'_, f64> {
         let _enter = span.enter();
         trace!(delta = self.sum_delta, "Checking conditions");
 
-        if self.window.is_empty() || self.sum_delta > self.accuracy {
-            debug!(
-                previous_price = self.previous_price,
-                price = self.price,
-                "Performing iterative step"
-            );
+        if self.deltas.is_empty() || self.sum_delta > self.accuracy {
+            debug!(h = self.price, "Performing iterative step");
             trace!("Performing iteration");
 
             let game = self.current_game();
-            trace!("Current game: {game:.3}");
+            debug!("Current game: {game:.3}");
 
             let (row, lowest_price) = game.lowest_price();
             trace!(
@@ -127,7 +117,7 @@ impl Iterator for Iter<'_, f64> {
 
                 let x = row as f64 / divisor;
                 let y = column as f64 / divisor;
-                trace!(x, y, price = lowest_price, "Saddle point found");
+                debug!(x, y, price = lowest_price, "Saddle point found");
                 (lowest_price, x, y)
             } else {
                 let span = span!(Level::TRACE, "Lo!=Hi");
@@ -150,21 +140,12 @@ impl Iterator for Iter<'_, f64> {
             self.price = price;
 
             if let Some(previous_price) = self.previous_price {
-                if self.window.len() == self.window_size.get() {
-                    let WindowElement { delta, .. } =
-                        self.window.pop_front().expect("window_size is non-zero");
-                    self.sum_delta -= delta;
+                if self.deltas.len() == self.window_size.get() {
+                    self.sum_delta -= self.deltas.pop_front().expect("window_size is non-zero");
                 }
 
                 let delta = (self.price - previous_price).abs();
-                self.window.push_back(WindowElement {
-                    delta,
-                    state: GameSolution {
-                        x,
-                        y,
-                        h: self.price,
-                    },
-                });
+                self.deltas.push_back(delta);
                 self.sum_delta += delta;
             }
             self.previous_price = Some(self.price);
