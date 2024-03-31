@@ -17,8 +17,8 @@ pub struct Iter<'a, T> {
     deltas: VecDeque<T>,
 
     n: usize,
-    previous_price: Option<T>,
-    price: T,
+    previous_h: Option<T>,
+    h: T,
     sum_delta: T,
 }
 
@@ -36,8 +36,8 @@ impl<'a, T: ComplexField> Iter<'a, T> {
             deltas: VecDeque::with_capacity(window_size.get()),
             window_size,
             n: 1,
-            previous_price: None,
-            price: T::zero(),
+            previous_h: None,
+            h: T::zero(),
             sum_delta: T::zero(),
         }
     }
@@ -90,35 +90,31 @@ impl Iterator for Iter<'_, f64> {
         trace!(delta = self.sum_delta, "Checking conditions");
 
         if self.deltas.is_empty() || self.sum_delta > self.accuracy {
-            debug!(h = self.price, "Performing iterative step");
-            trace!("Performing iteration");
+            debug!("Performing iterative step");
 
             let game = self.current_game();
             debug!("Current game: {game:.3}");
 
-            let (row, lowest_price) = game.lowest_price();
+            let (row, lowest_h) = game.lowest_price();
             trace!(
-                "Lowest price: {:.3?} -> [{row}]: {lowest_price:.3}",
+                "Lowest price: {:.3?} -> [{row}]: {lowest_h:.3}",
                 game.min_win_a().as_slice()
             );
-            let (column, highest_price) = game.highest_price();
+            let (column, highest_h) = game.highest_price();
             trace!(
-                "Highest price: {:.3?} -> [{column}]: {highest_price:.3}",
+                "Highest price: {:.3?} -> [{column}]: {highest_h:.3}",
                 game.max_loss_b().as_slice()
             );
 
             let divisor = self.n as f64;
-            // TODO: am I sure that comparing floats is okay?
-            //  It should be given that they have the same source,
-            //  but it may give false negatives on the values in different cells.
-            let (price, x, y) = if lowest_price == highest_price {
-                let span = span!(Level::TRACE, "Lo==Hi", price = lowest_price);
+            let (h, x, y) = if lowest_h == highest_h {
+                let span = span!(Level::TRACE, "Lo==Hi", price = lowest_h);
                 let _enter = span.enter();
 
                 let x = row as f64 / divisor;
                 let y = column as f64 / divisor;
-                debug!(x, y, price = lowest_price, "Saddle point found");
-                (lowest_price, x, y)
+                debug!("Saddle point found: x={x:.03}, y={y:.03}, h={lowest_h}");
+                (lowest_h, x, y)
             } else {
                 let span = span!(Level::TRACE, "Lo!=Hi");
                 let _enter = span.enter();
@@ -130,31 +126,27 @@ impl Iterator for Iter<'_, f64> {
                         break;
                     }
                 }
-                let price = brown_robinson.price_estimation();
+                let h = brown_robinson.price_estimation();
                 let (a_strategy, b_strategy) = brown_robinson.strategies_used();
                 let x = a_strategy.imax() as f64 / divisor;
                 let y = b_strategy.imax() as f64 / divisor;
-                debug!(x, y, price, "Brown-Robinson method completed");
-                (price, x, y)
+                debug!("Brown-Robinson method completed: x={x:.03}, y={y:.03}, h={h:.03}");
+                (h, x, y)
             };
-            self.price = price;
+            self.h = h;
 
-            if let Some(previous_price) = self.previous_price {
+            if let Some(previous_h) = self.previous_h {
                 if self.deltas.len() == self.window_size.get() {
                     self.sum_delta -= self.deltas.pop_front().expect("window_size is non-zero");
                 }
 
-                let delta = (self.price - previous_price).abs();
+                let delta = (self.h - previous_h).abs();
                 self.deltas.push_back(delta);
                 self.sum_delta += delta;
             }
-            self.previous_price = Some(self.price);
+            self.previous_h = Some(self.h);
 
-            Some(GameSolution {
-                x,
-                y,
-                h: self.price,
-            })
+            Some(GameSolution { x, y, h: self.h })
         } else {
             None
         }
