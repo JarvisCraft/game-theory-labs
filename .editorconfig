@@ -14,3 +14,7 @@ indent_size = 2
 [Cargo.lock]
 generated_code = true
 indent_size = 1
+
+[flake.lock]
+generated_code = true
+indent_size = 2

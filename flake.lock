@@ -1,4 +1,4 @@
-{
+git {
   "nodes": {
     "flake-utils": {
       "inputs": {
@@ -23,11 +23,11 @@
         "systems": "systems_2"
       },
       "locked": {
-        "lastModified": 1705309234,
-        "narHash": "sha256-uNRRNRKmJyCRC/8y1RqBkqWBLM034y4qN7EprSdmgyA=",
+        "lastModified": 1710146030,
+        "narHash": "sha256-SZ5L6eA7HJ/nmkzGG7/ISclqe6oZdOZTNoesiInkXPQ=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "1ef2e671c3b0c19053962c07dbda38332dcebf26",
+        "rev": "b1d9ab70662946ef0850d488da1c9019f3a9752a",
         "type": "github"
       },
       "original": {
@@ -38,11 +38,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1711386147,
-        "narHash": "sha256-7L6Bn3hcFFPPg/F2/7MSJhXxxGsPp1vU50n4RAuA8xQ=",
+        "lastModified": 1712613413,
+        "narHash": "sha256-TaFcS9kAi6kTTpXG6V9TRRYjg9EmwdYCBFn99j3woeA=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "3e3b1e2c180a87438ff65051e48b7e485e75a272",
+        "rev": "f21243c8dd6f5b88f66f9e35f9db121811cb2fec",
         "type": "github"
       },
       "original": {
@@ -53,11 +53,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1706487304,
-        "narHash": "sha256-LE8lVX28MV2jWJsidW13D2qrHU/RUUONendL2Q/WlJg=",
-        "owner": "NixOS",
+        "lastModified": 1712613413,
+        "narHash": "sha256-TaFcS9kAi6kTTpXG6V9TRRYjg9EmwdYCBFn99j3woeA=",
+        "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "90f456026d284c22b3e3497be980b2e47d0b28ac",
+        "rev": "f21243c8dd6f5b88f66f9e35f9db121811cb2fec",
         "type": "github"
       },
       "original": {
@@ -80,11 +80,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1711332768,
-        "narHash": "sha256-SFnlIwnrwJxEawLcrH7+zGb8spePcYyai5asMZnm0BM=",
+        "lastModified": 1712542394,
+        "narHash": "sha256-UZebDBECRSrJqw4K+LxZ6qFdYnScu6q1XCwqtsu1cas=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "8a8e3ea9a9a4b2225cb5e33e07c3a337f820168c",
+        "rev": "ece8bdb3c3b58def25f204b9a1261dee55d7c9c0",
         "type": "github"
       },
       "original": {
