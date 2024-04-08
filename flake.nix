@@ -11,12 +11,9 @@
         pkgs = import nixpkgs {
           inherit system;
           overlays = [ rust-overlay.overlays.default ];
-          config.allowUnfree = true;
         };
         rust = (pkgs.rustChannelOf { channel = "stable"; }).default.override {
           extensions = [ "rust-analyzer" "rust-src" "clippy" ];
         };
-      in rec {
-        devShell = pkgs.mkShell { nativeBuildInputs = with pkgs; [ rust ]; };
-      });
+      in { devShell = pkgs.mkShell { nativeBuildInputs = [ rust ]; }; });
 }
