@@ -3,68 +3,81 @@ use std::fmt::{self, Display, Formatter};
 use nalgebra::{DMatrix, Dim, Dyn, Matrix, RawStorage, VecStorage};
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum BeautifulCell<T> {
+pub enum HighlightableCell<T> {
     Normal(T),
-    Highlighted(T),
+    Highlighted(T, char, char),
 }
 
-impl<T: Display> Display for BeautifulCell<T> {
+impl<T: Copy> HighlightableCell<T> {
+    pub fn highlight(&mut self, left: char, right: char) {
+        *self = match *self {
+            HighlightableCell::Normal(value) => Self::Highlighted(value, left, right),
+            HighlightableCell::Highlighted(value, _, _) => Self::Highlighted(value, left, right),
+        }
+    }
+}
+
+impl<T: Display> Display for HighlightableCell<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            BeautifulCell::Normal(value) => {
+            HighlightableCell::Normal(value) => {
                 write!(f, " {value} ")
             }
-            BeautifulCell::Highlighted(value) => {
-                write!(f, "({value})")
+            HighlightableCell::Highlighted(value, left, right) => {
+                write!(f, "{left}{value}{right}")
             }
         }
     }
 }
 
-pub trait Highlight {
-    type Highlighted; // TODO: `Display`
+pub trait WithHighlighting {
+    type Highlighted;
 
-    fn highlight(self, x: usize, y: usize) -> Self::Highlighted;
+    fn with_highlighting(self) -> Self::Highlighted;
 }
 
-impl<T: Clone, R: Dim, C: Dim, S: RawStorage<T, R, C>> Highlight for Matrix<T, R, C, S> {
-    type Highlighted = DMatrix<BeautifulCell<T> /*R, C, S*/>;
+impl<T: Clone, R: Dim, C: Dim, S: RawStorage<T, R, C>> WithHighlighting for Matrix<T, R, C, S> {
+    type Highlighted = DMatrix<HighlightableCell<T>>;
 
-    fn highlight(self, row: usize, column: usize) -> Self::Highlighted {
+    fn with_highlighting(self) -> Self::Highlighted {
         let (rows, columns) = (self.nrows(), self.ncols());
-        let highlighted_index = row * columns + column;
-
         DMatrix::from_vec_storage(VecStorage::new(
             Dyn(rows),
             Dyn(columns),
             self.iter()
                 .cloned()
-                .enumerate()
-                .map(|(index, item)| {
-                    if index == highlighted_index {
-                        BeautifulCell::Highlighted(item)
-                    } else {
-                        BeautifulCell::Normal(item)
-                    }
-                })
+                .map(HighlightableCell::Normal)
                 .collect(),
         ))
     }
 }
 
+pub trait Highlight {
+    fn highlight(&mut self, row: usize, column: usize, left: char, right: char);
+}
+
+impl<T: Copy> Highlight for DMatrix<HighlightableCell<T>> {
+    fn highlight(&mut self, row: usize, column: usize, left: char, right: char) {
+        self[(row, column)].highlight(left, right)
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn foo() {
         use nalgebra::matrix;
+        let mut x = matrix![
+            1, 2, 3;
+            4, 5, 6;
+        ]
+        .with_highlighting();
+        x.highlight(1, 2, '(', ')');
+
         assert_eq!(
-            matrix![
-                1, 2, 3;
-                4, 5, 6;
-            ]
-            .highlight(1, 2)
-            .to_string(),
+            x.to_string(),
             "
   ┌             ┐
   │  1   2   3  │

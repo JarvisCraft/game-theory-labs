@@ -43,7 +43,7 @@ pub fn random_bi_matrix<T: SampleUniform>(
 
 /// ```
 /// fn assert_is_debug<T: std::fmt::Debug>() {}
-/// assert_is_debug::<game_theory::generate::Pair<i32>>()
+/// assert_is_debug::<nalgebra::DMatrix<game_theory::generate::Pair<i32>>>()
 /// ```
 #[derive(PartialEq, Eq, Hash, Ord, PartialOrd, Clone)]
 pub struct Pair<T>(T, T);
