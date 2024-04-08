@@ -1,4 +1,4 @@
-git {
+{
   "nodes": {
     "flake-utils": {
       "inputs": {

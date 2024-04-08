@@ -18,8 +18,6 @@
           inherit system;
           overlays = [ rust-overlay.overlays.default ];
         };
-        rust = (pkgs.rustChannelOf { channel = "stable"; }).default.override {
-          extensions = [ "rust-analyzer" "rust-src" "clippy" ];
-        };
+        rust = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
       in { devShell = pkgs.mkShell { nativeBuildInputs = [ rust ]; }; });
 }
