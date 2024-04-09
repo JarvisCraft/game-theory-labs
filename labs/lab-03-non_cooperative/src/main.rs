@@ -13,11 +13,17 @@ use tracing::{error, info, span, Level};
 fn main() {
     let Options {
         random_game_dimension,
+        min, max,
         seed,
         the_crossing_epsilon,
         game,
     } = Options::parse();
     tracing_subscriber::fmt::init();
+
+    if min >= max {
+        error!("Min={min} should be smaller than Max={max}");
+        return;
+    }
 
     let random = if let Some(seed) = seed {
         ChaCha20Rng::seed_from_u64(seed)
@@ -26,13 +32,13 @@ fn main() {
     };
 
     {
-        print_delimiter()
+        print_delimiter();
         let _span = span!(Level::INFO, "Random matrix").entered();
         analyze_bi_matrix_game(BiMatrixGame::random(
             random,
             random_game_dimension,
             random_game_dimension,
-            -50..50,
+            min..=max,
             f64::from,
         ));
     }
@@ -140,6 +146,12 @@ struct Options {
     /// The dimension of the random game
     #[arg(long, short, default_value_t = 10)]
     random_game_dimension: usize,
+
+    #[arg(long, default_value_t = -50)]
+    min: i32,
+
+    #[arg(long, default_value_t = 50)]
+    max: i32,
 
     /// The required accuracy for the iterative method
     #[arg(long, short)]
