@@ -4,12 +4,21 @@ use nalgebra::{dmatrix, DMatrix, Dyn, VecStorage};
 use peg::{error::ParseError, str::LineCol};
 
 use super::{DGame, Game};
+use crate::non_cooperative::{BiMatrixGame, Pair};
 
 impl FromStr for DGame<f64> {
     type Err = FromStrError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(game::dgame(s)?)
+    }
+}
+
+impl FromStr for BiMatrixGame<f64> {
+    type Err = FromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(game::bi_dgame(s)?)
     }
 }
 
@@ -25,13 +34,29 @@ peg::parser! {
             Ok(Game(dmatrix_from_rows(rows)?))
         }
 
+        pub rule bi_dgame<T: FromStr>() -> BiMatrixGame<T>
+            = "{" rows:((_ v:bi_row() _ { v }) ** ";") _ ";"? _ "}"
+        {?
+            Ok(BiMatrixGame::new(dmatrix_from_rows(rows)?))
+        }
+
+        rule _() = [' ' | '\t' | '\r' | '\n']*
+
         rule row<T: FromStr>() -> Vec<T>
             = "[" values:((_ v:float() _ { v }) ** ",") _ ","? _ "]"
         {
             values
         }
 
-        rule _() = [' ' | '\t' | '\r' | '\n']*
+        rule bi_row<T: FromStr>() -> Vec<Pair<T>>
+            = "[" values:((_ v:bi_float() _ { v }) ** ",") _ ","? _ "]"
+        {
+            values
+        }
+
+        rule bi_float<T: FromStr>() -> Pair<T> = "(" _ v1:float() _ "," _ v2:float() _ ")" {
+            Pair(v1, v2)
+        }
 
         rule float<T: FromStr>() -> T = num:$(sign()? finite_number()) {?
             T::from_str(num).or(Err("failed to parse float number"))
@@ -81,9 +106,8 @@ fn dmatrix_from_rows<T>(rows: Vec<Vec<T>>) -> Result<DMatrix<T>, &'static str> {
 mod tests {
     use nalgebra::dmatrix;
 
-    use crate::zero_sum::Game;
-
     use super::*;
+    use crate::zero_sum::Game;
 
     #[test]
     fn multi_line_f64_matrix() {
@@ -110,6 +134,22 @@ mod tests {
                     30f32, 40f32;
                     50f32, 60f32;
                     70f32, 80f32;
+            ])),
+        );
+    }
+
+    #[test]
+    fn simple_bi_matrix() {
+        assert_eq!(
+            game::bi_dgame(
+                "{
+                    [(-5, -5), (0, -10)];
+                    [(-10, 0), (-1, -1)];
+                }"
+            ),
+            Ok(BiMatrixGame::new(dmatrix![
+                Pair(-5., -5.), Pair(0., -10.);
+                Pair(-10., 0.), Pair(-1., -1.);
             ])),
         );
     }

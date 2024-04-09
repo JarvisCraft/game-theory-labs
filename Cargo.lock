@@ -266,8 +266,20 @@ dependencies = [
  "clap",
  "continuous_convex_concave_method",
  "game_theory",
- "prettytable",
  "thiserror",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "lab-03-non_cooperative"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "game_theory",
+ "nalgebra",
+ "rand",
+ "rand_chacha",
  "tracing",
  "tracing-subscriber",
 ]

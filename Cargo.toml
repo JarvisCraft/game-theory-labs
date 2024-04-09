@@ -23,6 +23,7 @@ rational = "1.5"
 prettytable = "0.10"
 # misc
 rand = "0.8.5"
+rand_chacha = "0.3.1"
 thiserror = "1.0.58"
 peg = "0.8.2"
 # IO
