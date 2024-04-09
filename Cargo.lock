@@ -549,6 +549,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "rk-02-closed-auctions"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "ordered-float",
+ "prettytable",
+ "rand",
+ "rand_chacha",
+ "thiserror",
+]
+
+[[package]]
 name = "rustversion"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,0 +1,12 @@
+[package]
+name = "rk-02-closed-auctions"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+clap = { workspace = true, features = ["derive"]}
+thiserror.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+ordered-float.workspace = true
+prettytable.workspace = true
