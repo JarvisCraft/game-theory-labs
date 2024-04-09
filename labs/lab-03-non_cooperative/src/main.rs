@@ -26,7 +26,7 @@ fn main() {
     };
 
     {
-        println!("=========================================");
+        print_delimiter()
         let _span = span!(Level::INFO, "Random matrix").entered();
         analyze_bi_matrix_game(BiMatrixGame::random(
             random,
