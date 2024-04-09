@@ -86,6 +86,7 @@ fn analyze_bi_matrix_game(game: BiMatrixGame<f64>) {
     {
         let nash_equilibriums = game.nash_equilibriums();
         let mut with_nash = game.0.clone().with_highlighting();
+        let mut count = 0;
         for OptimalBiMatrixStrategy {
             wins: _,
             coordinate: (row, column),
@@ -93,33 +94,39 @@ fn analyze_bi_matrix_game(game: BiMatrixGame<f64>) {
         {
             with_nash.highlight(row, column, 'N', ' ');
             nash.insert((row, column));
+            count += 1;
         }
-        info!("Nash equilibriums: {with_nash}");
+        info!("{count} Nash equilibriums: {with_nash}");
     }
 
-    let pareto = HashSet::new();
+    let mut pareto = HashSet::new();
     {
         let pareto_efficients = game.pareto_efficients();
         let mut with_pareto = game.0.clone().with_highlighting();
+        let mut count = 0;
         for OptimalBiMatrixStrategy {
             wins: _,
             coordinate: (row, column),
         } in pareto_efficients
         {
             with_pareto.highlight(row, column, 'P', ' ');
+            pareto.insert((row, column));
+            count += 1;
         }
-        info!("Pareto efficients: {with_pareto}");
+        info!("{count} Pareto efficients: {with_pareto}");
     }
 
     {
         let mut with_intersection = game.0.with_highlighting();
         let mut has_intersections = false;
+        let mut count = 0;
         for (row, column) in pareto.intersection(&nash).copied() {
             with_intersection.highlight(row, column, '*', '*');
             has_intersections = true;
+            count += 1;
         }
         if has_intersections {
-            info!("Intersection: {with_intersection}");
+            info!("{count} intersections: {with_intersection}");
         } else {
             info!("No intersections");
         }
