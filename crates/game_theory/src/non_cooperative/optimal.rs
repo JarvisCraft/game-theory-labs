@@ -56,10 +56,15 @@ impl<T> BiMatrixGame<T> {
         let Self(game) = self;
         let Pair(win_a, win_b) = &game[(row, column)];
 
-        if (0..game.nrows()).any(|other_row| game[(other_row, column)].0 > *win_a) {
+        if (0..game.nrows())
+            .filter(|other_row| *other_row != row)
+            .any(|other_row| game[(other_row, column)].0 >= *win_a)
+        {
             false
         } else {
-            (0..game.ncols()).all(|other_column| game[(row, other_column)].1 <= *win_b)
+            (0..game.ncols())
+                .filter(|other_column| *other_column != column)
+                .all(|other_column| game[(row, other_column)].1 <= *win_b)
         }
     }
 
