@@ -285,6 +285,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "lab-04_backward_induction"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "game_theory",
+ "rand",
+ "rand_chacha",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
