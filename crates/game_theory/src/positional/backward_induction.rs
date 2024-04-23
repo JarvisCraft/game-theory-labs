@@ -1,8 +1,9 @@
 use std::{
+    collections::HashMap,
     fmt,
     fmt::{Debug, Display, Formatter},
     io::{self, Write},
-    num::{NonZeroU8, Wrapping},
+    num::NonZeroU8,
 };
 
 use rand::{
@@ -36,17 +37,41 @@ pub struct BackwardInductionGame<T> {
 }
 
 impl<T> BackwardInductionGame<T> {
-    pub fn reduce(&mut self, mut out: impl Write)
+    pub fn reduce(&mut self, mut out: impl Write) -> io::Result<()>
     where
         T: Ord + Copy + Display,
     {
+        writeln!(out, "# Iteration #0")?;
+        writeln!(out)?;
         self.print_current(&mut out).unwrap();
-        // for layer in (0..self.layers.len() - 1).rev() {
-        //     let current_layer = &self.layers[layer];
-        //     let child_layer = &self.layers[layer + 1];
-        //
-        //     child_layer.nodes.chunks(child_layer.size)
-        // }
+
+        let mut iteration = 0;
+        for layer in (1..self.layers.len()).rev() {
+            iteration += 1;
+            writeln!(out, "# Iteration #{iteration}")?;
+            writeln!(out)?;
+
+            let mut wins = HashMap::<usize, Vec<Prize<T>>>::new();
+            for node in &self.layers[layer].nodes {
+                wins.entry(node.loc.parent)
+                    .or_default()
+                    .push(node.win.clone().unwrap());
+            }
+            for (parent_idx, prizes) in wins {
+                let parent = &mut self.layers[layer - 1].nodes[parent_idx];
+                let parent_player = parent.loc.player.0;
+                parent.win = Some(
+                    prizes
+                        .into_iter()
+                        .max_by_key(|prize| prize.0[parent_player])
+                        .unwrap(),
+                )
+            }
+
+            self.print_current(&mut out)?;
+        }
+
+        Ok(())
     }
 
     pub fn random(
@@ -133,44 +158,14 @@ impl<T> BackwardInductionGame<T> {
         writeln!(out, "flowchart LR")?;
 
         writeln!(out, "    0(({}))", Player(0))?;
+        let max_layer = self.layers.len() - 1;
         for layer in 1..self.layers.len() {
             let prev_layer = &self.layers[layer - 1];
             let cur_layer = &self.layers[layer];
 
             let mut prev_index = 0;
-
-            struct Win<T> {
-                player: Player,
-                from_uid: usize,
-                to_uid: usize,
-                prize: Prize<T>,
-            }
-            impl<T: Ord + Copy + Display> Win<T> {
-                fn commit(wins: &Vec<Self>, out: &mut impl Write) -> io::Result<()> {
-                    let Some(max_win) = wins
-                        .iter()
-                        .map(|Win { player, prize, .. }| prize.0[player.0])
-                        .max()
-                    else {
-                        return Ok(());
-                    };
-
-                    for Win {
-                        from_uid,
-                        to_uid,
-                        prize,
-                        ..
-                    } in wins
-                        .iter()
-                        .filter(|Win { player, prize, .. }| prize.0[player.0] == max_win)
-                    {
-                        writeln!(out, "    {} ===>|{}| {}", to_uid, prize, from_uid)?;
-                    }
-
-                    Ok(())
-                }
-            }
             let mut wins = vec![];
+
             for cur_index in 0..cur_layer.nodes.len() {
                 let cur = &cur_layer.nodes[cur_index];
                 if cur.loc.strat == 1 {
@@ -180,11 +175,19 @@ impl<T> BackwardInductionGame<T> {
                 }
 
                 let prev = &prev_layer.nodes[prev_index - 1];
-                writeln!(
-                    out,
-                    "    {0} ---> {1}(({2}))",
-                    prev.loc.uid, cur.loc.uid, cur.loc.player
-                )?;
+                if layer == max_layer {
+                    if let Some(prize) = &cur.win {
+                        writeln!(out, "    {} --> {}[[{}]]", prev.loc.uid, cur.loc.uid, prize)?;
+                    } else {
+                        writeln!(out, "    {} ---> {}[[_]]", prev.loc.uid, cur.loc.uid)?;
+                    }
+                } else {
+                    writeln!(
+                        out,
+                        "    {0} ---> {1}(({2}))",
+                        prev.loc.uid, cur.loc.uid, cur.loc.player
+                    )?;
+                }
                 if let Some(prize) = cur.win.clone() {
                     wins.push(Win {
                         from_uid: prev.loc.uid,
@@ -231,6 +234,38 @@ impl<T: Display> Display for Prize<T> {
             }
 
             write!(f, "{win}")?;
+        }
+
+        Ok(())
+    }
+}
+
+struct Win<T> {
+    player: Player,
+    from_uid: usize,
+    to_uid: usize,
+    prize: Prize<T>,
+}
+impl<T: Ord + Copy + Display> Win<T> {
+    fn commit(wins: &Vec<Self>, out: &mut impl Write) -> io::Result<()> {
+        let Some(max_win) = wins
+            .iter()
+            .map(|Win { player, prize, .. }| prize.0[player.0])
+            .max()
+        else {
+            return Ok(());
+        };
+
+        for Win {
+            from_uid,
+            to_uid,
+            prize,
+            ..
+        } in wins
+            .iter()
+            .filter(|Win { player, prize, .. }| prize.0[player.0] == max_win)
+        {
+            writeln!(out, "    {} ===>|\"{}\"| {}", to_uid, prize, from_uid)?;
         }
 
         Ok(())

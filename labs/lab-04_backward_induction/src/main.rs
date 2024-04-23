@@ -38,11 +38,17 @@ fn main() {
     let out = match File::create(&output) {
         Ok(file) => file,
         Err(e) => {
-            error!("Failed to create output file {output:?}");
+            error!("Failed to create output file {output:?}: {e}");
             return;
         }
     };
-    tree.reduce(out);
+    match tree.reduce(out) {
+        Ok(()) => {}
+        Err(e) => {
+            error!("Failed to reduce the tree: {e}");
+            return;
+        }
+    }
 }
 
 #[derive(Parser)]
