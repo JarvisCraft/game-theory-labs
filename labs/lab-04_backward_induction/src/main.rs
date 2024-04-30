@@ -42,12 +42,10 @@ fn main() {
             return;
         }
     };
+
     match tree.reduce(out) {
         Ok(()) => {}
-        Err(e) => {
-            error!("Failed to reduce the tree: {e}");
-            return;
-        }
+        Err(e) => error!("Failed to reduce the tree: {e}"),
     }
 }
 

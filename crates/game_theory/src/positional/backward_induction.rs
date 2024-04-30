@@ -156,6 +156,10 @@ impl<T> BackwardInductionGame<T> {
 
         let mut link_id = 0;
         let max_layer = self.layers.len() - 1;
+
+        let root_win = self.layers[0].nodes[0].prize.as_ref();
+        let mut parents = HashMap::from([(0usize, Wrapping(0xFF0000u32))]);
+
         for layer in 1..self.layers.len() {
             let prev_layer = &self.layers[layer - 1];
             let cur_layer = &self.layers[layer];
@@ -167,7 +171,7 @@ impl<T> BackwardInductionGame<T> {
                 let cur = &cur_layer.nodes[cur_index];
                 if cur.loc.strat == 1 {
                     prev_index += 1;
-                    link_id += Win::commit(&wins, out)?;
+                    Win::commit(&wins, out, &mut link_id)?;
                     wins.clear();
                 }
 
@@ -187,48 +191,33 @@ impl<T> BackwardInductionGame<T> {
                 }
                 link_id += 1;
 
-                if let Some(prize) = cur.prize.clone() {
+                if let Some(prize) = &cur.prize {
+                    let uid = cur.loc.uid;
+                    let parent_uid = &self.layers[layer - 1].nodes[cur.loc.parent].loc.uid;
+                    let color = if Some(prize) == root_win {
+                        let parent_color = parents
+                            .get_mut(parent_uid)
+                            .unwrap_or_else(|| panic!("Parent {parent_uid} for {uid}"));
+
+                        let color = *parent_color;
+                        // A big prime number to mix colors.
+                        *parent_color *= 82_589_933;
+                        parents.insert(uid, color);
+                        Some(color.0)
+                    } else {
+                        None
+                    };
+
                     wins.push(Win {
                         from_uid: prev.loc.uid,
                         to_uid: cur.loc.uid,
                         player: prev.loc.player,
-                        prize,
+                        prize: prize.clone(),
+                        color,
                     });
                 }
             }
-            link_id += Win::commit(&wins, out)?;
-        }
-
-        if let Some(root_win) = self.layers[0].nodes[0].prize.as_ref() {
-            let mut parents = HashMap::from([(0usize, Wrapping(0xFF0000u32))]);
-
-            for layer_id in 1..self.layers.len() {
-                let layer = &self.layers[layer_id];
-                for node in &layer.nodes {
-                    if let Some(prize) = &node.prize {
-                        let uid = node.loc.uid;
-                        let parent_uid = &self.layers[layer_id - 1].nodes[node.loc.parent].loc.uid;
-                        if prize == root_win {
-                            let parent_color = parents
-                                .get_mut(parent_uid)
-                                .unwrap_or_else(|| panic!("Parent {parent_uid} for {uid}"));
-
-                            writeln!(out, "    {parent_uid} ===> {uid}")?;
-                            writeln!(
-                                out,
-                                "    linkStyle {link_id} stroke:#{0:06x},color:#{0:06x},stroke-width:4px",
-                                parent_color.0 & 0xFFFFFF,
-                            )?;
-                            let color = *parent_color;
-                            link_id += 1;
-
-                            // A big prime number to mix colors.
-                            *parent_color *= 82_589_933;
-                            parents.insert(uid, color);
-                        }
-                    }
-                }
-            }
+            Win::commit(&wins, out, &mut link_id)?;
         }
 
         writeln!(out, "```")?;
@@ -275,31 +264,41 @@ struct Win<T> {
     from_uid: usize,
     to_uid: usize,
     prize: Prize<T>,
+    color: Option<u32>,
 }
 impl<T: Ord + Copy + Display> Win<T> {
-    fn commit(wins: &[Self], out: &mut impl Write) -> io::Result<usize> {
+    fn commit(wins: &[Self], out: &mut impl Write, link_id: &mut usize) -> io::Result<()> {
         let Some(max_win) = wins
             .iter()
             .map(|Win { player, prize, .. }| prize.0[player.0])
             .max()
         else {
-            return Ok(0);
+            return Ok(());
         };
 
-        let mut new_links = 0;
         for Win {
             from_uid,
             to_uid,
             prize,
+            color,
             ..
         } in wins
             .iter()
             .filter(|Win { player, prize, .. }| prize.0[player.0] == max_win)
         {
-            writeln!(out, "    {} -.->|\"{}\"| {}", to_uid, prize, from_uid)?;
-            new_links += 1;
+            if let Some(color) = color {
+                writeln!(out, "    {from_uid} ===>|\"{prize}\"| {to_uid}")?;
+                writeln!(
+                    out,
+                    "    linkStyle {link_id} stroke:#{0:06x},color:#{0:06x},stroke-width:4px",
+                    color & 0xFFFFFF,
+                )?;
+            } else {
+                writeln!(out, "    {to_uid} -.->|\"{prize}\"| {from_uid}")?;
+            }
+            *link_id += 1;
         }
 
-        Ok(new_links)
+        Ok(())
     }
 }
