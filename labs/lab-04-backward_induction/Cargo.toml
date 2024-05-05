@@ -1,5 +1,5 @@
 [package]
-name = "lab-04_backward_induction"
+name = "lab-04-backward_induction"
 version.workspace = true
 edition.workspace = true
 

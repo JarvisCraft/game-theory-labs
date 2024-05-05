@@ -147,7 +147,7 @@ where
 /// Returns [`None`] if the system has no solutions.
 fn solve<
     T: ComplexField,
-    N: Dim,
+    N: DimMin<N, Output = N>,
     SA: Storage<T, N, N>,
     SB: Storage<T, N, U1> + RawStorageMut<T, N, U1>,
 >(
@@ -156,7 +156,6 @@ fn solve<
 ) -> Option<Matrix<T, N, U1, SB>>
 where
     DefaultAllocator: Allocator<T, N, N> + Allocator<T, N> + Allocator<T, DimMinimum<N, N>>,
-    N: DimMin<N, Output = N>,
 {
     let a = a.qr();
     let mut b = b;

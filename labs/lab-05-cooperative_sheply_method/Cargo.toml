@@ -1,0 +1,10 @@
+[package]
+name = "lab-05-cooperative_sheply_method"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+game_theory.workspace = true
+clap = { workspace = true, features = ["derive"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true

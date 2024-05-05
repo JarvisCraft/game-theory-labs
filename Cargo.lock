@@ -194,6 +194,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "either"
+version = "1.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a47c1c47d2f5964e29c61246e81db715514cd532db6b5116a25ea3c03d6780a2"
+
+[[package]]
 name = "encode_unicode"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -203,10 +209,12 @@ checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 name = "game_theory"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "nalgebra",
  "peg",
  "rand",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
@@ -241,6 +249,15 @@ dependencies = [
  "hermit-abi",
  "libc",
  "windows-sys",
+]
+
+[[package]]
+name = "itertools"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+dependencies = [
+ "either",
 ]
 
 [[package]]
@@ -285,13 +302,23 @@ dependencies = [
 ]
 
 [[package]]
-name = "lab-04_backward_induction"
+name = "lab-04-backward_induction"
 version = "0.1.0"
 dependencies = [
  "clap",
  "game_theory",
  "rand",
  "rand_chacha",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "lab-05-cooperative_sheply_method"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "game_theory",
  "tracing",
  "tracing-subscriber",
 ]

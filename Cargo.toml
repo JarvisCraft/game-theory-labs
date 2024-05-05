@@ -26,6 +26,7 @@ rand = "0.8.5"
 rand_chacha = "0.3.1"
 thiserror = "1.0.58"
 peg = "0.8.2"
+itertools = "0.12.1"
 # IO
 clap = "4.5.3"
 tracing = "0.1.40"

@@ -8,3 +8,5 @@ nalgebra.workspace = true
 thiserror.workspace = true
 peg.workspace = true
 rand.workspace = true
+itertools.workspace = true
+tracing.workspace = true
