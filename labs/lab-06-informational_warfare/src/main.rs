@@ -1,4 +1,4 @@
-use std::ops::DivAssign;
+use std::{num::NonZeroU64, ops::DivAssign};
 
 use clap::Parser;
 use game_theory::generate::{random_matrix, random_vector};
@@ -7,10 +7,9 @@ use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use tracing::{debug, error, info};
 
-const DIMENSION: usize = 10;
-
 fn main() {
     let Options {
+        dimensions,
         x_min,
         x_max,
         agent_min,
@@ -23,20 +22,20 @@ fn main() {
 
     tracing_subscriber::fmt::init();
 
-    if x_min >= x_max {
+    if x_min >= x_max.get() {
         error!("Minimal X value = {x_min} should be smaller than maximal X value = {x_max}");
         return;
     }
 
-    if agent_min >= agent_max {
+    if agent_min >= agent_max.get() {
         error!(
             "Minimal agent value = {agent_min} should be smaller than maximal agent value = {agent_max}"
         );
         return;
     }
 
-    if player_1_agents + player_2_agents > DIMENSION {
-        error!("The sum of player 1 agents = {player_1_agents} and player 2 agents = {player_2_agents} should not exceed {DIMENSION}");
+    if player_1_agents + player_2_agents > dimensions {
+        error!("The sum of player 1 agents = {player_1_agents} and player 2 agents = {player_2_agents} should not exceed {dimensions}");
         return;
     }
 
@@ -46,18 +45,18 @@ fn main() {
         ChaCha20Rng::from_entropy()
     };
 
-    let mut a = random_matrix(&mut random, DIMENSION, DIMENSION, 0. ..=1.);
+    let mut a = random_matrix(&mut random, dimensions, dimensions, 0. ..=1.);
     for mut row in a.row_iter_mut() {
         row.div_assign(row.sum());
     }
     info!("A = {a:.03}");
 
-    let x = random_vector(&mut random, DIMENSION, x_min..=x_max);
+    let x = random_x(&mut random, dimensions, x_min, x_max);
     info!("x(0) = {:.03}", x.transpose());
     let (iteration, x) = simulate(&a, x, epsilon);
     info!("x({iteration}) = {:.03}", x.transpose());
 
-    let mut agents: Vec<_> = (0..DIMENSION).collect();
+    let mut agents: Vec<_> = (0..dimensions).collect();
     let agents_of_1: Vec<_> = agents
         .choose_multiple(&mut random, player_1_agents)
         .copied()
@@ -78,9 +77,9 @@ fn main() {
         agents_of_2.iter().map(|i| i + 1).collect::<Vec<_>>()
     );
 
-    let u = random.gen_range(agent_min..=agent_max);
-    let v = -random.gen_range(agent_min..=agent_max);
-    let mut x = random_vector(&mut random, DIMENSION, x_min..=x_max);
+    let u = random.gen_range(agent_min..=agent_max.get()) as f64;
+    let v = -(random.gen_range(agent_min..=agent_max.get()) as f64);
+    let mut x = random_x(&mut random, dimensions, x_min, x_max);
     for idx in agents_of_1 {
         x[idx] = u;
     }
@@ -91,6 +90,11 @@ fn main() {
     info!("x(0) = {:.03}", x.transpose());
     let (iteration, x) = simulate(&a, x, epsilon);
     info!("x({iteration}) = {:.03}", x.transpose());
+}
+
+fn random_x(random: impl Rng, n: usize, min: u64, max: NonZeroU64) -> DVector<f64> {
+    assert!(min < max.get());
+    random_vector(random, n, min..=max.get(), |value| value as f64)
 }
 
 fn simulate(a: &DMatrix<f64>, mut x: DVector<f64>, epsilon: f64) -> (usize, DVector<f64>) {
@@ -107,17 +111,20 @@ fn simulate(a: &DMatrix<f64>, mut x: DVector<f64>, epsilon: f64) -> (usize, DVec
 #[command(author, version, about, long_about = None)]
 #[clap(allow_negative_numbers = true)]
 struct Options {
-    #[arg(long, default_value_t = 1.)]
-    x_min: f64,
+    #[arg(long, short = 'n', default_value_t = 10)]
+    dimensions: usize,
 
-    #[arg(long, default_value_t = 20.)]
-    x_max: f64,
+    #[arg(long, default_value_t = 1)]
+    x_min: u64,
 
-    #[arg(long, default_value_t = 1.)]
-    agent_min: f64,
+    #[arg(long, default_value_t = NonZeroU64::new(20).unwrap())]
+    x_max: NonZeroU64,
 
-    #[arg(long, default_value_t = 20.)]
-    agent_max: f64,
+    #[arg(long, default_value_t = 1)]
+    agent_min: u64,
+
+    #[arg(long, default_value_t = NonZeroU64::new(100).unwrap())]
+    agent_max: NonZeroU64,
 
     #[arg(long, default_value_t = 2)]
     player_1_agents: usize,

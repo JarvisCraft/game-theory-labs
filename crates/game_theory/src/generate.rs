@@ -19,16 +19,17 @@ pub fn random_matrix<T: SampleUniform>(
     ))
 }
 
-pub fn random_vector<T: SampleUniform>(
+pub fn random_vector<T: SampleUniform, R>(
     mut random: impl Rng,
     length: usize,
     range: impl SampleRange<T> + Clone,
-) -> DVector<T> {
+    mapper: impl Fn(T) -> R,
+) -> DVector<R> {
     DVector::from_vec_storage(VecStorage::new(
         Dyn(length),
         U1,
         (0..length)
-            .map(|_| random.gen_range(range.clone()))
+            .map(|_| mapper(random.gen_range(range.clone())))
             .collect(),
     ))
 }
