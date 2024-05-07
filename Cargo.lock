@@ -620,6 +620,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rk-03-informational_warfare"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "game_theory",
+ "nalgebra",
+ "rand",
+ "rand_chacha",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "rustversion"
 version = "1.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
