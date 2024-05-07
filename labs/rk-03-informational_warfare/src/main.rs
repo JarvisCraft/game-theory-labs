@@ -1,8 +1,8 @@
 use std::{num::NonZeroU64, ops::DivAssign};
 
 use clap::Parser;
-use game_theory::generate::{random_matrix, random_vector};
-use nalgebra::{DMatrix, DVector};
+use game_theory::generate::random_matrix;
+use nalgebra::DMatrix;
 use rand::prelude::*;
 use rand_chacha::ChaCha20Rng;
 use tracing::{debug, error, info};
@@ -60,12 +60,8 @@ fn main() {
         row.div_assign(row.sum());
     }
     info!("A = {a:.03}");
-
-    let x = random_x(&mut random, dimensions, x_min, x_max);
-    info!("x(0) = {:.03}", x.transpose());
-    let (iteration, result_x) = simulate(&a, x.clone(), epsilon);
-    info!("x({iteration}) = {:.03}", result_x.transpose());
-    info!("A^{iteration} = {:.03}", a.pow(iteration as u32));
+    let (iteration, a) = simulate(a, epsilon);
+    info!("A^{iteration} = {a:.03}");
 
     let mut agents: Vec<_> = (0..dimensions).collect();
     let agents_of_1: Vec<_> = agents
@@ -88,30 +84,14 @@ fn main() {
         agents_of_2.iter().map(|i| i + 1).collect::<Vec<_>>()
     );
 
-    let u_effect = random.gen_range(agent_min..=agent_max.get()) as f64;
-    let v_effect = -(random.gen_range(agent_min..=agent_max.get()) as f64);
-    let mut x_affected = x.clone();
-    for &idx in &agents_of_1 {
-        x_affected[idx] = u_effect;
-    }
-    for &idx in &agents_of_2 {
-        x_affected[idx] = v_effect;
-    }
-
-    info!("x(0) = {:.03}", x_affected.transpose());
-    let (iteration, result_x) = simulate(&a, x_affected, epsilon);
-    info!("x({iteration}) = {:.03}", result_x.transpose());
-    let a_final = a.pow(iteration as u32);
-    info!("A^{iteration} = {:.03}", a_final);
-
-    let r_f: f64 = a_final
+    let r_f: f64 = a
         .row(0)
         .iter()
         .enumerate()
         .filter(|(index, _)| agents_of_1.contains(index))
         .map(|(_, &value)| value)
         .sum();
-    let r_s: f64 = a_final
+    let r_s: f64 = a
         .row(1)
         .iter()
         .enumerate()
@@ -136,27 +116,23 @@ fn main() {
     info!("d_f = {d_f:.03}, d_s = {d_s:.03}");
 
     if d_f < d_s  {
-        info!("df < ds => player 1 is the winner");
+        info!("df < ds => player 1 wins");
     } else if d_f > d_s {
-        info!("df > ds => player 2 is the winner");
+        info!("df > ds => player 2 wins");
     } else {
         info!("df == ds => draw");
     }
 }
 
-fn random_x(random: impl Rng, n: usize, min: u64, max: NonZeroU64) -> DVector<f64> {
-    assert!(min < max.get());
-    random_vector(random, n, min..=max.get(), |value| value as f64)
-}
-
-fn simulate(a: &DMatrix<f64>, mut x: DVector<f64>, epsilon: f64) -> (usize, DVector<f64>) {
+fn simulate(mut a: DMatrix<f64>, epsilon: f64) -> (usize, DMatrix<f64>) {
+    let multiplier = a.clone();
     let mut iteration = 0;
-    while x.max() - x.min() > epsilon {
+    while a.column_iter().any(|row| row.max() - row.min() > epsilon) {
         iteration += 1;
-        x = a * &x;
-        debug!("x({iteration}) = {}", x.transpose());
+        a *= &multiplier;
+        debug!("A^{iteration} = {}", a);
     }
-    (iteration, x)
+    (iteration, a)
 }
 
 fn u(a: f64, b: f64, c: f64, d: f64, g_f: f64, g_s: f64, r_f: f64, r_s: f64) -> f64 {
