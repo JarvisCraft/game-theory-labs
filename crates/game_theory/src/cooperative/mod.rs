@@ -56,10 +56,7 @@ impl<T> CooperativeGame<T> {
 }
 
 impl<T: PartialOrd + Add<Output = T> + Clone> CooperativeGame<T> {
-    pub fn is_super_additive(&self) -> bool
-    where
-        T: core::fmt::Display,
-    {
+    pub fn is_super_additive(&self) -> bool {
         use itertools::Itertools;
 
         self.coalitions()
@@ -72,7 +69,7 @@ impl<T: PartialOrd + Add<Output = T> + Clone> CooperativeGame<T> {
             })
     }
 
-    pub fn is_convex(&self) -> bool {
+    pub fn is_convex(&self) -> bool where T: core::fmt::Display {
         use itertools::Itertools;
 
         self.coalitions()
@@ -80,6 +77,8 @@ impl<T: PartialOrd + Add<Output = T> + Clone> CooperativeGame<T> {
             .all(|(s, t)| {
                 let left = self.v(s | t).clone() + self.v(s & t).clone();
                 let right = self.v(s).clone() + self.v(t).clone();
+                println!("{} => {}", s|t, left);
+                println!("{},{} => {}", s, t, right);
                 left >= right
             })
     }

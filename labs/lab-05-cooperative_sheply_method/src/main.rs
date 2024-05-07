@@ -47,9 +47,9 @@ fn main() {
         .map(|(index, (&x, i))| (index + 1, x, *game.v(i) as f64))
     {
         if x >= v {
-            info!("Player {i} Individual rationalism: x_{i}={x} >= v({{{i}}})={v}");
+            info!("Player {i} Individual rationalism: x_{i}={x:.03} >= v({{{i}}})={v:.03}");
         } else {
-            warn!("Player {i} NO Individual rationalism: x_{i}={x} < v({{{i}}})={v}");
+            warn!("Player {i} NO Individual rationalism: x_{i}={x:.03} < v({{{i}}})={v:.03}");
         }
     }
 }

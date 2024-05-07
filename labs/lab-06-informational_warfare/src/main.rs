@@ -53,8 +53,9 @@ fn main() {
 
     let x = random_x(&mut random, dimensions, x_min, x_max);
     info!("x(0) = {:.03}", x.transpose());
-    let (iteration, x) = simulate(&a, x, epsilon);
-    info!("x({iteration}) = {:.03}", x.transpose());
+    let (iteration, result_x) = simulate(&a, x.clone(), epsilon);
+    info!("x({iteration}) = {:.03}", result_x.transpose());
+    info!("A^{iteration} = {:.03}", a.pow(iteration as u32));
 
     let mut agents: Vec<_> = (0..dimensions).collect();
     let agents_of_1: Vec<_> = agents
@@ -79,7 +80,7 @@ fn main() {
 
     let u = random.gen_range(agent_min..=agent_max.get()) as f64;
     let v = -(random.gen_range(agent_min..=agent_max.get()) as f64);
-    let mut x = random_x(&mut random, dimensions, x_min, x_max);
+    let mut x = x;
     for idx in agents_of_1 {
         x[idx] = u;
     }
@@ -88,8 +89,9 @@ fn main() {
     }
 
     info!("x(0) = {:.03}", x.transpose());
-    let (iteration, x) = simulate(&a, x, epsilon);
-    info!("x({iteration}) = {:.03}", x.transpose());
+    let (iteration, result_x) = simulate(&a, x, epsilon);
+    info!("x({iteration}) = {:.03}", result_x.transpose());
+    info!("A^{iteration} = {:.03}", a.pow(iteration as u32));
 }
 
 fn random_x(random: impl Rng, n: usize, min: u64, max: NonZeroU64) -> DVector<f64> {
