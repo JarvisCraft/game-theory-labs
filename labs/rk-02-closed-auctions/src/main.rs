@@ -11,13 +11,21 @@ use rand_chacha::ChaCha20Rng;
 #[derive(thiserror::Error, Debug)]
 enum Error {
     #[error("invalid bounds: min = {min}, max = {max}")]
-    InvalidPriceRange { min: u32, max: NonZeroU32 }
+    InvalidPriceRange { min: u32, max: NonZeroU32 },
 }
 
 fn main() -> Result<(), Error> {
-    let Options { n, min_price, max_price, seed } = Options::parse();
+    let Options {
+        n,
+        min_price,
+        max_price,
+        seed,
+    } = Options::parse();
     if min_price >= max_price.get() {
-        return Err(Error::InvalidPriceRange { min: min_price, max: max_price})
+        return Err(Error::InvalidPriceRange {
+            min: min_price,
+            max: max_price,
+        });
     }
     let range = min_price..=max_price.get();
 
@@ -27,13 +35,16 @@ fn main() -> Result<(), Error> {
         ChaCha20Rng::from_entropy()
     };
 
-    let values: Vec<_> = iter::repeat_with(|| random.gen_range(range.clone())).take(n.get().into()).collect();
+    let values: Vec<_> = iter::repeat_with(|| random.gen_range(range.clone()))
+        .take(n.get().into())
+        .collect();
     println!("Values: {values:?}");
 
     let bets = bets(values.iter().copied());
     println!("Bets: {bets:.3?}");
 
-    let (winning_index, winning_bet) = winner(bets.iter().copied()).expect("the size is non-negative");
+    let (winning_index, winning_bet) =
+        winner(bets.iter().copied()).expect("the size is non-negative");
 
     let mut table = prettytable::table!([
         FrBybic->"Номер игрока",
@@ -43,7 +54,10 @@ fn main() -> Result<(), Error> {
     ]);
     table.set_format(*FORMAT_BOX_CHARS);
 
-    println!("Победитель: Игрок #{} со ставкой: {winning_bet:.3}", winning_index - 1);
+    println!(
+        "Победитель: Игрок #{} со ставкой: {winning_bet:.3}",
+        winning_index - 1
+    );
     for (index, (value, bet)) in iter::zip(values, bets).enumerate() {
         if index == winning_index {
             table.add_row(row![
@@ -68,7 +82,10 @@ fn bets(values: impl ExactSizeIterator<Item = u32>) -> Vec<f64> {
 }
 
 fn winner(values: impl IntoIterator<Item = f64>) -> Option<(usize, f64)> {
-    values.into_iter().enumerate().max_by_key(|(_, value)| NotNan::new(*value).unwrap())
+    values
+        .into_iter()
+        .enumerate()
+        .max_by_key(|(_, value)| NotNan::new(*value).unwrap())
 }
 
 #[derive(Parser)]

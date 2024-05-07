@@ -13,7 +13,8 @@ use tracing::{error, info, span, Level};
 fn main() {
     let Options {
         random_game_dimension,
-        min, max,
+        min,
+        max,
         seed,
         the_crossing_epsilon,
         game,

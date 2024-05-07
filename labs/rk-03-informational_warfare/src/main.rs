@@ -18,10 +18,10 @@ fn main() {
         player_2_agents,
         epsilon,
         seed,
-        a,
-        b,
-        c,
-        d,
+        a: param_a,
+        b: param_b,
+        c: param_c,
+        d: param_d,
         g_f,
         g_s,
     } = Options::parse();
@@ -79,23 +79,23 @@ fn main() {
         .copied()
         .collect();
 
-    println!(
+    info!(
         "Agents of Player 1: {:?}",
         agents_of_1.iter().map(|i| i + 1).collect::<Vec<_>>()
     );
-    println!(
+    info!(
         "Agents of Player 2: {:?}",
         agents_of_2.iter().map(|i| i + 1).collect::<Vec<_>>()
     );
 
-    let u = random.gen_range(agent_min..=agent_max.get()) as f64;
-    let v = -(random.gen_range(agent_min..=agent_max.get()) as f64);
+    let u_effect = random.gen_range(agent_min..=agent_max.get()) as f64;
+    let v_effect = -(random.gen_range(agent_min..=agent_max.get()) as f64);
     let mut x_affected = x.clone();
     for &idx in &agents_of_1 {
-        x_affected[idx] = u;
+        x_affected[idx] = u_effect;
     }
     for &idx in &agents_of_2 {
-        x_affected[idx] = v;
+        x_affected[idx] = v_effect;
     }
 
     info!("x(0) = {:.03}", x_affected.transpose());
@@ -118,14 +118,30 @@ fn main() {
         .filter(|(index, _)| agents_of_2.contains(index))
         .map(|(_, &value)| value)
         .sum();
+    info!("r_f = {r_f:.03}, r_s = {r_s:.03}");
 
-    info!("Result for player 1: {r_f:.06}, Result for player 2: {r_s:.06}");
+    let u = u(param_a, param_b, param_c, param_d, g_f, g_s, r_f, r_s);
+    let v = v(param_a, param_b, g_f, r_f, r_s, u);
+    info!("u = {u:.03}, v = {v:.03}");
 
-    // X = u * result_1 + v * result_2 + (x_affected?)
-    info!("\\Phi_f(u, v) = a * X - b * X ** 2 - g_f * u ** 2 / 2");
-    info!("\\Phi_s(u, v) = c * X - d * X ** 2 - g_s * v ** 2 / 2");
+    let x = u * r_f + v * r_s;
+    info!("Point of utopia: {x:.03}");
 
-    // let f =
+    let max_f = param_a / (2. * param_b);
+    let max_s = param_c / (2. * param_d);
+    info!("max_f = {max_f:.03}, max_s = {max_s:.03}");
+
+    let d_f = (x - max_f).abs();
+    let d_s = (x - max_s).abs();
+    info!("d_f = {d_f:.03}, d_s = {d_s:.03}");
+
+    if d_f < d_s  {
+        info!("df < ds => player 1 is the winner");
+    } else if d_f > d_s {
+        info!("df > ds => player 2 is the winner");
+    } else {
+        info!("df == ds => draw");
+    }
 }
 
 fn random_x(random: impl Rng, n: usize, min: u64, max: NonZeroU64) -> DVector<f64> {
@@ -141,6 +157,15 @@ fn simulate(a: &DMatrix<f64>, mut x: DVector<f64>, epsilon: f64) -> (usize, DVec
         debug!("x({iteration}) = {}", x.transpose());
     }
     (iteration, x)
+}
+
+fn u(a: f64, b: f64, c: f64, d: f64, g_f: f64, g_s: f64, r_f: f64, r_s: f64) -> f64 {
+    (2. * (a * d - b * c) * r_f * r_s * r_s + a * g_s * r_f)
+        / (2. * d * g_f * r_s * r_s + g_f * g_s + 2. * b * g_s * r_f * r_f)
+}
+
+fn v(a: f64, b: f64, g_f: f64, r_f: f64, r_s: f64, u: f64) -> f64 {
+    (g_f * u + 2. * b * r_f * r_f * u - a * r_f) / (-2. * b * r_f * r_s)
 }
 
 #[derive(Parser)]
@@ -175,21 +200,21 @@ struct Options {
     #[arg(long)]
     seed: Option<u64>,
 
-    #[arg(short, default_value_t = 1)]
-    a: u32,
+    #[arg(short, default_value_t = 4.)]
+    a: f64,
 
-    #[arg(short, default_value_t = 1)]
-    b: u32,
+    #[arg(short, default_value_t = 3.)]
+    b: f64,
 
-    #[arg(short, default_value_t = 1)]
-    c: u32,
+    #[arg(short, default_value_t = 2.)]
+    c: f64,
 
-    #[arg(short, default_value_t = 1)]
-    d: u32,
+    #[arg(short, default_value_t = 2.)]
+    d: f64,
 
-    #[arg(long, default_value_t = 1)]
-    g_f: u32,
+    #[arg(long, default_value_t = 3.)]
+    g_f: f64,
 
-    #[arg(long, default_value_t = 1)]
-    g_s: u32,
+    #[arg(long, default_value_t = 3.)]
+    g_s: f64,
 }
