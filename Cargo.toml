@@ -30,4 +30,4 @@ itertools = "0.12.1"
 # IO
 clap = "4.5.3"
 tracing = "0.1.40"
-tracing-subscriber = "0.3.18"
+tracing-subscriber = "0.3.20"
